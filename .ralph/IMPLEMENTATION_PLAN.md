@@ -144,7 +144,7 @@
 
 > **Goal**: A Click-based `can_commsgen` console script that runs the full pipeline.
 
-- [ ] **6.1 Implement Click CLI** — `can_commsgen/cli.py` with `@click.command`, options: `--schema` (required, multiple), `--out-plc` (required), `--out-cpp` (required), `--out-report` (optional). Pipeline: load_schema → generate_plc → generate_cpp → generate_report (if requested). Validation errors print to stderr, exit 1.
+- [x] **6.1 Implement Click CLI** — `can_commsgen/cli.py` with `@click.command`, options: `--schema` (required, multiple), `--out-plc` (required), `--out-cpp` (required), `--out-report` (optional). Pipeline: load_schema → generate_plc → generate_cpp → generate_report (if requested). Validation errors print to stderr, exit 1.
   - *Why*: User-facing entry point.
   - *Test*: Smoke test in `tests/test_cli.py` — run against `example_schema.yaml` with tmp dirs, verify exit 0 and expected files exist. Error test — invalid schema gives exit 1 and stderr output.
 
