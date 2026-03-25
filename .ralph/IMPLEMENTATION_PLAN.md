@@ -40,7 +40,7 @@
 
 > **Goal**: `can_commsgen/schema.py` provides dataclasses and a `load_schema()` function that returns a fully resolved, validated, bitpacked schema model.
 
-- [ ] **2.1 Define dataclasses** — `Schema`, `PlcConfig`, `EnumDef`, `MessageDef`, `FieldDef` per schema-model.md. Include all derived fields (`wire_bits`, `wire_signed`, `bit_offset`, `wire_min`, `wire_max`, `plc_var_name`, `cpp_var_name`, `dlc`, `backing_type`).
+- [x] **2.1 Define dataclasses** — `Schema`, `PlcConfig`, `EnumDef`, `MessageDef`, `FieldDef` per schema-model.md. Include all derived fields (`wire_bits`, `wire_signed`, `bit_offset`, `wire_min`, `wire_max`, `plc_var_name`, `cpp_var_name`, `dlc`, `backing_type`).
   - *Why*: These are the data structures consumed by every generator.
   - *Test*: `pixi run pyright can_commsgen/` passes — types are consistent.
 
