@@ -1,0 +1,19 @@
+(* THIS FILE IS AUTO-GENERATED. DO NOT EDIT. *)
+FUNCTION_BLOCK {{ fb_name }}
+VAR_INPUT
+{% for v in var_inputs %}
+    {{ v.name_padded }} : {{ v.type_str }};
+{% endfor %}
+END_VAR
+VAR
+    tx   : ifmRCAN.CAN_Tx;
+    data : ARRAY[0..7] OF USINT;
+END_VAR
+
+data := [8(0)];
+{% for line in insert_lines %}
+{{ line }}
+{% endfor %}
+
+tx(xEnable := TRUE, eChannel := channel, xExtended := TRUE,
+   udiID := 16#{{ can_id }}, usiDLC := {{ dlc }}, aData := data);

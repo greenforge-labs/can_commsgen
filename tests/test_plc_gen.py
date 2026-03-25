@@ -62,6 +62,20 @@ def test_motor_command_recv_generation(
     assert generated == expected
 
 
+def test_drive_status_send_generation(
+    example_schema_path: Path,
+    golden_plc_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Generated DRIVE_STATUS_SEND.st matches the golden file."""
+    schema = load_schema([example_schema_path])
+    generate_plc(schema, tmp_path)
+
+    generated = (tmp_path / "DRIVE_STATUS_SEND.st").read_text()
+    expected = (golden_plc_dir / "DRIVE_STATUS_SEND.st").read_text()
+    assert generated == expected
+
+
 def test_pc_state_recv_generation(
     example_schema_path: Path,
     golden_plc_dir: Path,
