@@ -94,7 +94,7 @@
   - *Why*: RECV FBs are the PLC's receive path.
   - *Test*: Generated `MOTOR_COMMAND_RECV.st` and `PC_STATE_RECV.st` match golden files.
 
-- [ ] **3.4 Implement `send_fb.st.j2` template + generation** — Produces `{MSG_NAME}_SEND.st` for each `plc_to_pc` message. Field values as VAR_INPUT, CAN_INSERT_BITS packing, CAN_Tx transmission.
+- [x] **3.4 Implement `send_fb.st.j2` template + generation** — Produces `{MSG_NAME}_SEND.st` for each `plc_to_pc` message. Field values as VAR_INPUT, CAN_INSERT_BITS packing, CAN_Tx transmission.
   - *Why*: SEND FBs are the PLC's transmit path.
   - *Test*: Generated `DRIVE_STATUS_SEND.st` matches golden file.
 
