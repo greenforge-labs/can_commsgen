@@ -43,6 +43,9 @@ def generate_plc(schema: Schema, output_dir: Path) -> None:
     # SEND function blocks (plc_to_pc messages)
     _generate_send_fbs(schema, output_dir, env)
 
+    # Global Variable List (pc_to_plc fields + timeout booleans)
+    _generate_gvl(schema, output_dir, env)
+
 
 def _generate_bit_helpers(output_dir: Path, env: jinja2.Environment) -> None:
     """Generate CAN_EXTRACT_BITS.st and CAN_INSERT_BITS.st helper functions."""
@@ -62,6 +65,65 @@ def _generate_enums(
         max_name_len = max(len(name) for name in enum.values)
         rendered = template.render(enum=enum, max_name_len=max_name_len)
         (output_dir / f"{enum.name}.st").write_text(rendered)
+
+
+def _gvl_plc_type(field: FieldDef, enum_names: set[str]) -> str:
+    """Return the PLC type string for a GVL variable."""
+    if field.type == "real":
+        return "REAL"
+    elif field.type == "bool":
+        return "BOOL"
+    elif field.type in enum_names:
+        return field.type
+    else:
+        return ENDPOINT_TYPES[field.type][0]
+
+
+def _generate_gvl(
+    schema: Schema, output_dir: Path, env: jinja2.Environment
+) -> None:
+    """Generate GVL.st with received fields and timeout booleans."""
+    template = env.get_template("gvl.st.j2")
+    enum_names = {e.name for e in schema.enums}
+
+    # Collect all variable names and types across all pc_to_plc messages
+    # to compute global padding.
+    all_var_names: list[str] = []
+    messages_data: list[dict[str, object]] = []
+
+    for msg in schema.messages:
+        if msg.direction != "pc_to_plc":
+            continue
+
+        vars_info: list[dict[str, str]] = []
+        for f in msg.fields:
+            name = f.plc_var_name
+            type_str = _gvl_plc_type(f, enum_names)
+            all_var_names.append(name)
+            vars_info.append({"name": name, "type_str": type_str})
+
+        # Timeout boolean
+        timeout_name = _snake_to_camel(msg.name) + "WithinTimeout"
+        all_var_names.append(timeout_name)
+        vars_info.append({"name": timeout_name, "type_str": "BOOL"})
+
+        messages_data.append(
+            {
+                "name": msg.name,
+                "can_id": f"{msg.id:08X}",
+                "direction": msg.direction,
+                "vars": vars_info,
+            }
+        )
+
+    # Pad all variable names to the same width across all messages
+    max_name_len = max(len(n) for n in all_var_names) if all_var_names else 0
+    for msg_data in messages_data:
+        for var in msg_data["vars"]:  # type: ignore[union-attr]
+            var["name_padded"] = var["name"].ljust(max_name_len)  # type: ignore[index]
+
+    rendered = template.render(messages=messages_data)
+    (output_dir / "GVL.st").write_text(rendered)
 
 
 def _send_plc_type(field: FieldDef, enum_names: set[str]) -> str:

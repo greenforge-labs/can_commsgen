@@ -1,0 +1,13 @@
+(* THIS FILE IS AUTO-GENERATED. DO NOT EDIT. *)
+{attribute 'qualified_only'}
+VAR_GLOBAL
+{% for msg in messages %}
+    (* {{ msg.name }} -- 0x{{ msg.can_id }}, {{ msg.direction }} *)
+{% for var in msg.vars %}
+    {{ var.name_padded }} : {{ var.type_str }};
+{% endfor %}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+END_VAR

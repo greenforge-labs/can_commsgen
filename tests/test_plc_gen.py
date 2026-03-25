@@ -76,6 +76,20 @@ def test_drive_status_send_generation(
     assert generated == expected
 
 
+def test_gvl_generation(
+    example_schema_path: Path,
+    golden_plc_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Generated GVL.st matches the golden file."""
+    schema = load_schema([example_schema_path])
+    generate_plc(schema, tmp_path)
+
+    generated = (tmp_path / "GVL.st").read_text()
+    expected = (golden_plc_dir / "GVL.st").read_text()
+    assert generated == expected
+
+
 def test_pc_state_recv_generation(
     example_schema_path: Path,
     golden_plc_dir: Path,
