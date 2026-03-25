@@ -28,6 +28,18 @@ def generate_plc(schema: Schema, output_dir: Path) -> None:
     # Enum files
     _generate_enums(schema, output_dir, env)
 
+    # Bit helper functions (static content)
+    _generate_bit_helpers(output_dir, env)
+
+
+def _generate_bit_helpers(output_dir: Path, env: jinja2.Environment) -> None:
+    """Generate CAN_EXTRACT_BITS.st and CAN_INSERT_BITS.st helper functions."""
+    extract_template = env.get_template("extract_bits.st.j2")
+    (output_dir / "CAN_EXTRACT_BITS.st").write_text(extract_template.render())
+
+    insert_template = env.get_template("insert_bits.st.j2")
+    (output_dir / "CAN_INSERT_BITS.st").write_text(insert_template.render())
+
 
 def _generate_enums(
     schema: Schema, output_dir: Path, env: jinja2.Environment
