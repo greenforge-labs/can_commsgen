@@ -116,11 +116,11 @@
 
 > **Goal**: `can_commsgen/cpp.py` generates `can_messages.hpp` matching the golden file and passing the C++ roundtrip test.
 
-- [ ] **4.1 Implement `can_messages.hpp.j2` template** — Single template producing the complete header: pragma once, includes (`cmath`, `cstdint`, `optional`, `linux/can.h`), namespace `project_can`, enum classes, message structs, `detail::extract_bits`/`insert_bits` helpers, parse functions (all messages), build functions (all messages).
+- [x] **4.1 Implement `can_messages.hpp.j2` template** — Single template producing the complete header: pragma once, includes (`cmath`, `cstdint`, `optional`, `linux/can.h`), namespace `project_can`, enum classes, message structs, `detail::extract_bits`/`insert_bits` helpers, parse functions (all messages), build functions (all messages).
   - *Why*: The C++ header is the single C++ output file.
   - *Test*: Generated `can_messages.hpp` matches `tests/golden/cpp/can_messages.hpp`.
 
-- [ ] **4.2 Wire up `generate_cpp()` function** — `cpp.py` exposes `generate_cpp(schema: Schema, output_dir: Path)`.
+- [x] **4.2 Wire up `generate_cpp()` function** — `cpp.py` exposes `generate_cpp(schema: Schema, output_dir: Path)`.
   - *Why*: Single entry point for C++ generation used by CLI.
   - *Test*: Snapshot test in `tests/test_cpp_gen.py` passes.
 

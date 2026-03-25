@@ -1,0 +1,97 @@
+// THIS FILE IS AUTO-GENERATED. DO NOT EDIT.
+#pragma once
+#include <cmath>
+#include <cstdint>
+#include <optional>
+#include <linux/can.h>
+
+namespace project_can {
+
+// -- Enums --------------------------------------------------------------------
+{% for enum in enums %}
+
+enum class {{ enum.name }} : {{ enum.backing_type_cpp }} {
+{% for entry in enum.entries %}
+    {{ entry }},
+{% endfor %}
+};
+{% endfor %}
+
+// -- Message structs ----------------------------------------------------------
+{% for msg in messages %}
+
+// {{ msg.comment }}
+struct {{ msg.struct_name }} {
+{% for member in msg.members %}
+    {{ member }}
+{% endfor %}
+};
+{% endfor %}
+
+// -- Bit-level helpers --------------------------------------------------------
+
+namespace detail {
+
+inline int64_t extract_bits(const uint8_t data[8], uint16_t bit_offset,
+                            uint16_t bit_count, bool is_signed) {
+    uint64_t raw = 0;
+    for (uint16_t i = 0; i < bit_count; ++i) {
+        uint16_t byte_idx = (bit_offset + i) / 8;
+        uint16_t bit_idx  = (bit_offset + i) % 8;
+        if (data[byte_idx] & (1u << bit_idx))
+            raw |= (uint64_t{1} << i);
+    }
+    if (is_signed && (raw & (uint64_t{1} << (bit_count - 1)))) {
+        raw |= ~((uint64_t{1} << bit_count) - 1);
+    }
+    return static_cast<int64_t>(raw);
+}
+
+inline void insert_bits(uint8_t data[8], uint16_t bit_offset,
+                        uint16_t bit_count, int64_t value) {
+    auto raw = static_cast<uint64_t>(value);
+    for (uint16_t i = 0; i < bit_count; ++i) {
+        uint16_t byte_idx = (bit_offset + i) / 8;
+        uint16_t bit_idx  = (bit_offset + i) % 8;
+        if (raw & (uint64_t{1} << i))
+            data[byte_idx] |= (1u << bit_idx);
+        else
+            data[byte_idx] &= ~(1u << bit_idx);
+    }
+}
+
+} // namespace detail
+
+// -- Parse functions (wire -> struct) -----------------------------------------
+{% for msg in messages %}
+
+// {{ msg.comment }}
+inline std::optional<{{ msg.struct_name }}> parse_{{ msg.name }}(const can_frame &frame) {
+    if ((frame.can_id & CAN_EFF_MASK) != {{ msg.can_id_hex }}) return std::nullopt;
+    if (frame.can_dlc != {{ msg.dlc }}) return std::nullopt;
+
+    {{ msg.struct_name }} msg;
+{% for line in msg.parse_lines %}
+{{ line }}
+{% endfor %}
+    return msg;
+}
+{% endfor %}
+
+// -- Build functions (struct -> wire) -----------------------------------------
+{% for msg in messages %}
+
+// {{ msg.comment }}
+inline can_frame build_{{ msg.name }}(const {{ msg.struct_name }} &msg) {
+    can_frame frame{};
+    frame.can_id  = {{ msg.can_id_hex }} | CAN_EFF_FLAG;
+    frame.can_dlc = {{ msg.dlc }};
+
+{% for line in msg.build_lines %}
+{{ line }}
+{% endfor %}
+    return frame;
+}
+{% endfor %}
+
+} // namespace project_can
