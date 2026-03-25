@@ -68,7 +68,7 @@
   - *Why*: Must reject invalid schemas with clear error messages before generation.
   - *Test*: Table-driven `(yaml_snippet, expected_error_substring)` tests — one per validation rule.
 
-- [ ] **2.8 Implement enum backing type derivation** — Smallest IEC/C++ integer type fitting max value: 0-255 → USINT/uint8_t, 256-65535 → UINT/uint16_t, etc.
+- [x] **2.8 Implement enum backing type derivation** — Smallest IEC/C++ integer type fitting max value: 0-255 → USINT/uint8_t, 256-65535 → UINT/uint16_t, etc.
   - *Why*: Used in PLC enum files and C++ enum class declarations.
   - *Test*: DriveMode (max 3) → USINT/uint8_t. Verify against golden output.
 
