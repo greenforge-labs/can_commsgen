@@ -60,7 +60,7 @@
   - *Why*: Every generated file uses these transforms.
   - *Test*: `("target_velocity", "rpm")` → PLC `targetVelocity_rpm`, C++ `target_velocity_rpm`. `("fault_code", None)` → PLC `faultCode`, C++ `fault_code`. `"motor_command"` → FB `MOTOR_COMMAND_RECV`, struct `MotorCommand`.
 
-- [ ] **2.6 Implement bitpacking + DLC computation** — Assign sequential bit offsets to fields. DLC = ceil(total_bits / 8).
+- [x] **2.6 Implement bitpacking + DLC computation** — Assign sequential bit offsets to fields. DLC = ceil(total_bits / 8).
   - *Why*: Bit offsets are needed by every generator; DLC is needed by PLC FBs and C++ parse/build.
   - *Test*: Example schema DLCs: motor_command=4, drive_status=6, pc_state=1. Bit offsets: motor_command fields at 0 and 16; drive_status fields at 0, 16, 28, 38.
 
