@@ -354,11 +354,15 @@ def load_schema(paths: list[Path]) -> Schema:
     # Build enum lookup for wire type inference
     enum_map = {e.name: e for e in merged_enums}
 
-    # Derive wire types and naming for all fields
+    # Derive wire types, naming, bit offsets, and DLC for all messages
     for msg in merged_messages:
+        bit_offset = 0
         for f in msg.fields:
             _infer_wire_type(f, enum_map)
             f.plc_var_name = plc_var_name(f.name, f.unit)
             f.cpp_var_name = cpp_var_name(f.name, f.unit)
+            f.bit_offset = bit_offset
+            bit_offset += f.wire_bits
+        msg.dlc = math.ceil(bit_offset / 8)
 
     return Schema(plc=merged_plc, enums=merged_enums, messages=merged_messages)

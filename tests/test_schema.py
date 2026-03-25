@@ -402,6 +402,47 @@ def test_struct_name(message_name: str, expected: str) -> None:
     assert struct_name(message_name) == expected
 
 
+# ── Bitpacking + DLC tests ────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "msg_name, expected_dlc",
+    [
+        pytest.param("motor_command", 4, id="motor_command_dlc"),
+        pytest.param("drive_status", 6, id="drive_status_dlc"),
+        pytest.param("pc_state", 1, id="pc_state_dlc"),
+    ],
+)
+def test_dlc_computation(
+    example_schema_path: Path, msg_name: str, expected_dlc: int
+) -> None:
+    """DLC = ceil(total_bits / 8) for each message."""
+    schema = load_schema([example_schema_path])
+    msg = next(m for m in schema.messages if m.name == msg_name)
+    assert msg.dlc == expected_dlc
+
+
+@pytest.mark.parametrize(
+    "msg_name, field_name, expected_offset",
+    [
+        pytest.param("motor_command", "target_velocity", 0, id="mc_target_velocity"),
+        pytest.param("motor_command", "torque_limit", 16, id="mc_torque_limit"),
+        pytest.param("drive_status", "actual_velocity", 0, id="ds_actual_velocity"),
+        pytest.param("drive_status", "motor_temp", 16, id="ds_motor_temp"),
+        pytest.param("drive_status", "bus_voltage", 28, id="ds_bus_voltage"),
+        pytest.param("drive_status", "fault_code", 38, id="ds_fault_code"),
+        pytest.param("pc_state", "drive_mode", 0, id="ps_drive_mode"),
+    ],
+)
+def test_bit_offsets(
+    example_schema_path: Path, msg_name: str, field_name: str, expected_offset: int
+) -> None:
+    """Fields are assigned sequential bit offsets."""
+    schema = load_schema([example_schema_path])
+    f = _find_field(schema, msg_name, field_name)
+    assert f.bit_offset == expected_offset
+
+
 def test_naming_applied_in_load_schema(example_schema_path: Path) -> None:
     """Verify naming transforms are applied to fields during schema loading."""
     schema = load_schema([example_schema_path])
