@@ -98,7 +98,7 @@
   - *Why*: SEND FBs are the PLC's transmit path.
   - *Test*: Generated `DRIVE_STATUS_SEND.st` matches golden file.
 
-- [ ] **3.5 Implement `gvl.st.j2` template + generation** — Produces `GVL.st` with `qualified_only` attribute. Only `pc_to_plc` fields + `{messageName}WithinTimeout` booleans.
+- [x] **3.5 Implement `gvl.st.j2` template + generation** — Produces `GVL.st` with `qualified_only` attribute. Only `pc_to_plc` fields + `{messageName}WithinTimeout` booleans.
   - *Why*: GVL is where RECV FBs store received values.
   - *Test*: Generated `GVL.st` matches golden file.
 
