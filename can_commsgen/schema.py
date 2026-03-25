@@ -309,6 +309,122 @@ def _process_enums(enums: list[EnumDef]) -> None:
         enum.backing_type_cpp = cpp_bt
 
 
+# ── Validation ──────────────────────────────────────────────────────────────
+
+
+def _validate_schema(
+    enums: list[EnumDef],
+    messages: list[MessageDef],
+) -> None:
+    """Run semantic validation rules on a parsed schema.
+
+    Raises SchemaError on the first violation found.
+    """
+    enum_names = {e.name for e in enums}
+
+    # Rule 6: Duplicate CAN IDs
+    seen_ids: dict[int, str] = {}
+    for msg in messages:
+        if msg.id in seen_ids:
+            raise SchemaError(
+                f"Duplicate CAN ID 0x{msg.id:X}: "
+                f"'{msg.name}' and '{seen_ids[msg.id]}'"
+            )
+        seen_ids[msg.id] = msg.name
+
+    for msg in messages:
+        total_bits = 0
+        for f in msg.fields:
+            typ = f.type
+
+            # Rule 1: real requires min, max, resolution
+            if typ == "real":
+                if f.min is None or f.max is None or f.resolution is None:
+                    raise SchemaError(
+                        f"{msg.name}.{f.name}: type 'real' requires "
+                        f"min, max, and resolution"
+                    )
+
+            # Rule 2: resolution only on real
+            if typ != "real" and f.resolution is not None:
+                raise SchemaError(
+                    f"{msg.name}.{f.name}: 'resolution' is only "
+                    f"valid on type 'real'"
+                )
+
+            # Rule 3: min/max on bool or enum
+            if typ == "bool" and (f.min is not None or f.max is not None):
+                raise SchemaError(
+                    f"{msg.name}.{f.name}: 'min'/'max' not valid on "
+                    f"type 'bool'"
+                )
+            if typ in enum_names and (f.min is not None or f.max is not None):
+                raise SchemaError(
+                    f"{msg.name}.{f.name}: 'min'/'max' not valid on "
+                    f"enum type '{typ}'"
+                )
+
+            # Rule 7: undeclared enum reference
+            if (
+                typ not in ENDPOINT_TYPES
+                and typ not in enum_names
+            ):
+                raise SchemaError(
+                    f"{msg.name}.{f.name}: unknown type '{typ}'"
+                )
+
+            # Rule 8: unsigned type with min < 0
+            if typ in ENDPOINT_TYPES and typ.startswith("uint"):
+                if f.min is not None and f.min < 0:
+                    raise SchemaError(
+                        f"{msg.name}.{f.name}: unsigned type '{typ}' "
+                        f"cannot have negative min ({f.min})"
+                    )
+
+            # Rule 4: integer range outside endpoint type
+            if typ in INTEGER_RANGES and f.min is not None and f.max is not None:
+                type_min, type_max = INTEGER_RANGES[typ]
+                if f.min < type_min or f.max > type_max:
+                    raise SchemaError(
+                        f"{msg.name}.{f.name}: range [{f.min}, {f.max}] "
+                        f"exceeds {typ} bounds [{type_min}, {type_max}]"
+                    )
+
+            # Accumulate bits for rule 5 check
+            if typ == "bool":
+                total_bits += 1
+            elif typ in enum_names:
+                max_val = max(enums[next(
+                    i for i, e in enumerate(enums) if e.name == typ
+                )].values.values())
+                total_bits += _bits_for_unsigned(max_val)
+            elif typ == "real":
+                assert f.min is not None and f.max is not None and f.resolution is not None
+                wire_min = round(f.min / f.resolution)
+                wire_max = round(f.max / f.resolution)
+                is_signed = f.min < 0
+                if is_signed:
+                    total_bits += _bits_for_signed(wire_min, wire_max)
+                else:
+                    total_bits += _bits_for_unsigned(wire_max)
+            elif typ in ENDPOINT_TYPES:
+                if f.min is not None and f.max is not None:
+                    _plc, _cpp, _fw, is_signed = ENDPOINT_TYPES[typ]
+                    if is_signed:
+                        total_bits += _bits_for_signed(int(f.min), int(f.max))
+                    else:
+                        total_bits += _bits_for_unsigned(int(f.max))
+                else:
+                    total_bits += ENDPOINT_TYPES[typ][2]
+
+        # Rule 5: frame > 64 bits
+        if total_bits > 64:
+            raise SchemaError(
+                f"{msg.name}: total frame bits ({total_bits}) exceeds "
+                f"maximum of 64"
+            )
+
+
 def load_schema(paths: list[Path]) -> Schema:
     """Load one or more YAML schema files, validate, merge, and return a Schema.
 
@@ -347,6 +463,9 @@ def load_schema(paths: list[Path]) -> Schema:
             merged_messages.append(_parse_message(msg_raw))
 
     assert merged_plc is not None  # guaranteed by non-empty paths + validation
+
+    # Semantic validation (before any derivation)
+    _validate_schema(merged_enums, merged_messages)
 
     # Derive enum properties
     _process_enums(merged_enums)

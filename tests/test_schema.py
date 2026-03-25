@@ -461,3 +461,109 @@ def test_naming_applied_in_load_schema(example_schema_path: Path) -> None:
     mode = _find_field(schema, "pc_state", "drive_mode")
     assert mode.plc_var_name == "driveMode"
     assert mode.cpp_var_name == "drive_mode"
+
+
+# ── Validation rule tests ────────────────────────────────────────────────
+
+
+def _make_schema_yaml(
+    messages_yaml: str,
+    enums_yaml: str = "",
+) -> str:
+    """Build a minimal valid YAML schema string with custom messages/enums."""
+    base = 'version: "1"\nplc:\n  can_channel: CHAN_0\n'
+    if enums_yaml:
+        base += f"enums:\n{enums_yaml}"
+    base += f"messages:\n{messages_yaml}"
+    return base
+
+
+@pytest.mark.parametrize(
+    "messages_yaml, enums_yaml, expected_error",
+    [
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: real\n        min: 0.0\n        max: 10.0\n",
+            "",
+            "type 'real' requires min, max, and resolution",
+            id="real_missing_resolution",
+        ),
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: real\n        resolution: 0.1\n",
+            "",
+            "type 'real' requires min, max, and resolution",
+            id="real_missing_min_max",
+        ),
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: uint8\n        min: 0\n        max: 100\n        resolution: 0.1\n",
+            "",
+            "'resolution' is only valid on type 'real'",
+            id="resolution_on_non_real",
+        ),
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: bool\n        min: 0\n        max: 1\n",
+            "",
+            "'min'/'max' not valid on type 'bool'",
+            id="min_max_on_bool",
+        ),
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: Mode\n        min: 0\n        max: 3\n",
+            "  - name: Mode\n    values:\n      OFF: 0\n      ON: 1\n      AUTO: 2\n      MANUAL: 3\n",
+            "'min'/'max' not valid on enum type 'Mode'",
+            id="min_max_on_enum",
+        ),
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: uint8\n        min: 0\n        max: 300\n",
+            "",
+            "exceeds uint8 bounds",
+            id="integer_range_outside_type",
+        ),
+        pytest.param(
+            "  - name: m1\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: bool\n"
+            "  - name: m2\n    id: 0x100\n    direction: plc_to_pc\n    fields:\n"
+            "      - name: y\n        type: bool\n",
+            "",
+            "Duplicate CAN ID",
+            id="duplicate_can_id",
+        ),
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: Bogus\n",
+            "",
+            "unknown type 'Bogus'",
+            id="undeclared_enum",
+        ),
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: x\n        type: uint16\n        min: -10\n        max: 100\n",
+            "",
+            "unsigned type 'uint16' cannot have negative min",
+            id="unsigned_negative_min",
+        ),
+        pytest.param(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: a\n        type: uint64\n"
+            "      - name: b\n        type: bool\n",
+            "",
+            "total frame bits (65) exceeds maximum of 64",
+            id="frame_exceeds_64_bits",
+        ),
+    ],
+)
+def test_validation_rules(
+    tmp_path: Path,
+    messages_yaml: str,
+    enums_yaml: str,
+    expected_error: str,
+) -> None:
+    """Each semantic validation rule produces a clear SchemaError."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(_make_schema_yaml(messages_yaml, enums_yaml))
+    with pytest.raises(SchemaError, match=re.escape(expected_error)):
+        load_schema([yaml_file])

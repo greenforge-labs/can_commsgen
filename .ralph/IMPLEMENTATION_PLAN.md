@@ -64,7 +64,7 @@
   - *Why*: Bit offsets are needed by every generator; DLC is needed by PLC FBs and C++ parse/build.
   - *Test*: Example schema DLCs: motor_command=4, drive_status=6, pc_state=1. Bit offsets: motor_command fields at 0 and 16; drive_status fields at 0, 16, 28, 38.
 
-- [ ] **2.7 Implement validation rules** — All rules from design.md 6.4 and schema-model.md: (1) real missing min/max/resolution, (2) resolution on non-real, (3) min/max on bool/enum, (4) integer range outside endpoint type, (5) frame >64 bits, (6) duplicate CAN IDs, (7) undeclared enum reference, (8) unsigned type with min<0.
+- [x] **2.7 Implement validation rules** — All rules from design.md 6.4 and schema-model.md: (1) real missing min/max/resolution, (2) resolution on non-real, (3) min/max on bool/enum, (4) integer range outside endpoint type, (5) frame >64 bits, (6) duplicate CAN IDs, (7) undeclared enum reference, (8) unsigned type with min<0.
   - *Why*: Must reject invalid schemas with clear error messages before generation.
   - *Test*: Table-driven `(yaml_snippet, expected_error_substring)` tests — one per validation rule.
 
