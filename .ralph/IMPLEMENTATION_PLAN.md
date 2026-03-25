@@ -90,7 +90,7 @@
   - *Why*: All RECV/SEND FBs depend on these helpers.
   - *Test*: Generated files match `tests/golden/plc/CAN_EXTRACT_BITS.st` and `tests/golden/plc/CAN_INSERT_BITS.st`.
 
-- [ ] **3.3 Implement `recv_fb.st.j2` template + generation** — Produces `{MSG_NAME}_RECV.st` for each `pc_to_plc` message. Includes CAN_Rx, DLC check, field extraction with CAN_EXTRACT_BITS, TON timeout. Uses `REAL_TO_INT` for signed reals, `REAL_TO_UINT` for unsigned reals in scaling expressions. Handles real/integer/bool/enum field types.
+- [x] **3.3 Implement `recv_fb.st.j2` template + generation** — Produces `{MSG_NAME}_RECV.st` for each `pc_to_plc` message. Includes CAN_Rx, DLC check, field extraction with CAN_EXTRACT_BITS, TON timeout. Uses `REAL_TO_INT` for signed reals, `REAL_TO_UINT` for unsigned reals in scaling expressions. Handles real/integer/bool/enum field types.
   - *Why*: RECV FBs are the PLC's receive path.
   - *Test*: Generated `MOTOR_COMMAND_RECV.st` and `PC_STATE_RECV.st` match golden files.
 
