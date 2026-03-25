@@ -10,6 +10,7 @@ from can_commsgen.schema import (
     Schema,
     SchemaError,
     cpp_var_name,
+    enum_backing_type,
     fb_name,
     load_schema,
     plc_var_name,
@@ -567,3 +568,38 @@ def test_validation_rules(
     yaml_file.write_text(_make_schema_yaml(messages_yaml, enums_yaml))
     with pytest.raises(SchemaError, match=re.escape(expected_error)):
         load_schema([yaml_file])
+
+
+# ── Enum backing type tests ────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "max_value, expected_plc, expected_cpp",
+    [
+        pytest.param(0, "USINT", "uint8_t", id="zero"),
+        pytest.param(3, "USINT", "uint8_t", id="small_enum"),
+        pytest.param(255, "USINT", "uint8_t", id="uint8_max"),
+        pytest.param(256, "UINT", "uint16_t", id="uint8_overflow"),
+        pytest.param(65535, "UINT", "uint16_t", id="uint16_max"),
+        pytest.param(65536, "UDINT", "uint32_t", id="uint16_overflow"),
+        pytest.param(2**32 - 1, "UDINT", "uint32_t", id="uint32_max"),
+        pytest.param(2**32, "ULINT", "uint64_t", id="uint32_overflow"),
+    ],
+)
+def test_enum_backing_type(
+    max_value: int, expected_plc: str, expected_cpp: str
+) -> None:
+    """enum_backing_type selects the smallest integer type fitting max_value."""
+    plc, cpp = enum_backing_type(max_value)
+    assert plc == expected_plc
+    assert cpp == expected_cpp
+
+
+def test_enum_backing_type_in_loaded_schema(example_schema_path: Path) -> None:
+    """DriveMode (max 3) gets USINT/uint8_t backing type after full schema load."""
+    schema = load_schema([example_schema_path])
+    dm = schema.enums[0]
+    assert dm.name == "DriveMode"
+    assert dm.backing_type_plc == "USINT"
+    assert dm.backing_type_cpp == "uint8_t"
+    assert dm.wire_bits == 2
