@@ -158,7 +158,7 @@
   - *Why*: Catches regressions across the full pipeline in one shot.
   - *Test*: All golden file comparisons pass.
 
-- [ ] **7.2 C++ roundtrip via CLI** — Test that runs CLI to generate, then compiles and runs the C++ roundtrip test.
+- [x] **7.2 C++ roundtrip via CLI** — Test that runs CLI to generate, then compiles and runs the C++ roundtrip test.
   - *Why*: Validates the CLI-to-compiled-C++ path works end-to-end.
   - *Test*: cmake build + ctest passes (34 roundtrip assertions).
 
