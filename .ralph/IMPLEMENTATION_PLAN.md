@@ -162,7 +162,7 @@
   - *Why*: Validates the CLI-to-compiled-C++ path works end-to-end.
   - *Test*: cmake build + ctest passes (34 roundtrip assertions).
 
-- [ ] **7.3 Multi-schema merge test** — Split `example_schema.yaml` into two files (e.g. one with motor_command, one with drive_status+pc_state), pass both to CLI, verify output is identical to single-file case.
+- [x] **7.3 Multi-schema merge test** — Split `example_schema.yaml` into two files (e.g. one with motor_command, one with drive_status+pc_state), pass both to CLI, verify output is identical to single-file case.
   - *Why*: design.md specifies multiple schema files are merged before generation.
   - *Test*: Output matches golden files.
 
