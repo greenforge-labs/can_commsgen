@@ -48,7 +48,7 @@
   - *Why*: Provides structural validation before the semantic pipeline runs; also enables VS Code autocomplete per design.md 6.3.
   - *Test*: `tests/fixtures/example_schema.yaml` validates against schema.json. An invalid YAML snippet does not.
 
-- [ ] **2.3 Implement YAML loading + JSON Schema validation** — `load_schema(paths: list[Path]) -> Schema` entry point. Load YAML files, merge (combine enums + messages lists), validate against `schema.json` using `jsonschema` library.
+- [x] **2.3 Implement YAML loading + JSON Schema validation** — `load_schema(paths: list[Path]) -> Schema` entry point. Load YAML files, merge (combine enums + messages lists), validate against `schema.json` using `jsonschema` library.
   - *Why*: First step of the processing pipeline (design.md 6.4).
   - *Test*: Loading `example_schema.yaml` returns a Schema with 1 enum and 3 messages. Loading invalid YAML raises a clear error.
 
