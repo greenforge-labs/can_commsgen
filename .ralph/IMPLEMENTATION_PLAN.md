@@ -102,7 +102,7 @@
   - *Why*: GVL is where RECV FBs store received values.
   - *Test*: Generated `GVL.st` matches golden file.
 
-- [ ] **3.6 Implement `main_input.st.j2` template + generation** — Produces `main_input.st` calling all RECV FBs with `ifmDevice.CAN_CHANNEL.{can_channel}`.
+- [x] **3.6 Implement `main_input.st.j2` template + generation** — Produces `main_input.st` calling all RECV FBs with `ifmDevice.CAN_CHANNEL.{can_channel}`.
   - *Why*: Wires RECV FBs into the PLC's main scan cycle.
   - *Test*: Generated `main_input.st` matches golden file.
 
