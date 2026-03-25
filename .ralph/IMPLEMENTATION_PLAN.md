@@ -44,7 +44,7 @@
   - *Why*: These are the data structures consumed by every generator.
   - *Test*: `pixi run pyright can_commsgen/` passes — types are consistent.
 
-- [ ] **2.2 Create `schema.json`** — JSON Schema for structural validation of YAML input. Covers required top-level keys (`version`, `plc`, `messages`), enum structure, message structure, field properties, valid type names.
+- [x] **2.2 Create `schema.json`** — JSON Schema for structural validation of YAML input. Covers required top-level keys (`version`, `plc`, `messages`), enum structure, message structure, field properties, valid type names.
   - *Why*: Provides structural validation before the semantic pipeline runs; also enables VS Code autocomplete per design.md 6.3.
   - *Test*: `tests/fixtures/example_schema.yaml` validates against schema.json. An invalid YAML snippet does not.
 
