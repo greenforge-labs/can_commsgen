@@ -603,3 +603,128 @@ def test_enum_backing_type_in_loaded_schema(example_schema_path: Path) -> None:
     assert dm.backing_type_plc == "USINT"
     assert dm.backing_type_cpp == "uint8_t"
     assert dm.wire_bits == 2
+
+
+# ── Full integration test (plan item 2.9) ─────────────────────────────────
+
+
+def test_full_schema_integration(example_schema_path: Path) -> None:
+    """Load example_schema.yaml end-to-end and verify every derived value."""
+    schema = load_schema([example_schema_path])
+
+    # ── Top-level structure ──
+    assert schema.plc.can_channel == "CHAN_0"
+    assert len(schema.enums) == 1
+    assert len(schema.messages) == 3
+
+    # ── Enum: DriveMode ──
+    dm = schema.enums[0]
+    assert dm.name == "DriveMode"
+    assert dm.values == {"IDLE": 0, "VELOCITY": 1, "POSITION": 2, "TORQUE": 3}
+    assert dm.wire_bits == 2
+    assert dm.backing_type_plc == "USINT"
+    assert dm.backing_type_cpp == "uint8_t"
+
+    # ── Message: motor_command ──
+    mc = schema.messages[0]
+    assert mc.name == "motor_command"
+    assert mc.id == 0x00000100
+    assert mc.direction == "pc_to_plc"
+    assert mc.timeout_ms == 500
+    assert mc.dlc == 4
+    assert len(mc.fields) == 2
+
+    tv = mc.fields[0]
+    assert tv.name == "target_velocity"
+    assert tv.type == "real"
+    assert tv.wire_bits == 16
+    assert tv.wire_signed is True
+    assert tv.bit_offset == 0
+    assert tv.wire_min == -32000
+    assert tv.wire_max == 32000
+    assert tv.plc_var_name == "targetVelocity_rpm"
+    assert tv.cpp_var_name == "target_velocity_rpm"
+
+    tl = mc.fields[1]
+    assert tl.name == "torque_limit"
+    assert tl.type == "real"
+    assert tl.wire_bits == 16
+    assert tl.wire_signed is False
+    assert tl.bit_offset == 16
+    assert tl.wire_min == 0
+    assert tl.wire_max == 65535
+    assert tl.plc_var_name == "torqueLimit_Nm"
+    assert tl.cpp_var_name == "torque_limit_Nm"
+
+    # ── Message: drive_status ──
+    ds = schema.messages[1]
+    assert ds.name == "drive_status"
+    assert ds.id == 0x00000200
+    assert ds.direction == "plc_to_pc"
+    assert ds.timeout_ms is None
+    assert ds.dlc == 6
+    assert len(ds.fields) == 4
+
+    av = ds.fields[0]
+    assert av.name == "actual_velocity"
+    assert av.type == "real"
+    assert av.wire_bits == 16
+    assert av.wire_signed is True
+    assert av.bit_offset == 0
+    assert av.wire_min == -32000
+    assert av.wire_max == 32000
+    assert av.plc_var_name == "actualVelocity_rpm"
+    assert av.cpp_var_name == "actual_velocity_rpm"
+
+    mt = ds.fields[1]
+    assert mt.name == "motor_temp"
+    assert mt.type == "real"
+    assert mt.wire_bits == 12
+    assert mt.wire_signed is True
+    assert mt.bit_offset == 16
+    assert mt.wire_min == -400
+    assert mt.wire_max == 2000
+    assert mt.plc_var_name == "motorTemp_degC"
+    assert mt.cpp_var_name == "motor_temp_degC"
+
+    bv = ds.fields[2]
+    assert bv.name == "bus_voltage"
+    assert bv.type == "real"
+    assert bv.wire_bits == 10
+    assert bv.wire_signed is False
+    assert bv.bit_offset == 28
+    assert bv.wire_min == 0
+    assert bv.wire_max == 1023
+    assert bv.plc_var_name == "busVoltage_V"
+    assert bv.cpp_var_name == "bus_voltage_V"
+
+    fc = ds.fields[3]
+    assert fc.name == "fault_code"
+    assert fc.type == "uint8"
+    assert fc.wire_bits == 8
+    assert fc.wire_signed is False
+    assert fc.bit_offset == 38
+    assert fc.wire_min == 0
+    assert fc.wire_max == 255
+    assert fc.plc_var_name == "faultCode"
+    assert fc.cpp_var_name == "fault_code"
+
+    # ── Message: pc_state ──
+    ps = schema.messages[2]
+    assert ps.name == "pc_state"
+    assert ps.id == 0x00000300
+    assert ps.direction == "pc_to_plc"
+    assert ps.timeout_ms == 1000
+    assert ps.dlc == 1
+    assert len(ps.fields) == 1
+
+    dmode = ps.fields[0]
+    assert dmode.name == "drive_mode"
+    assert dmode.type == "DriveMode"
+    assert dmode.wire_bits == 2
+    assert dmode.wire_signed is False
+    assert dmode.bit_offset == 0
+    assert dmode.wire_min == 0
+    assert dmode.wire_max == 3
+    assert dmode.plc_var_name == "driveMode"
+    assert dmode.cpp_var_name == "drive_mode"

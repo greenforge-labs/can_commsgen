@@ -72,7 +72,7 @@
   - *Why*: Used in PLC enum files and C++ enum class declarations.
   - *Test*: DriveMode (max 3) → USINT/uint8_t. Verify against golden output.
 
-- [ ] **2.9 Full example schema integration test** — Load `example_schema.yaml` end-to-end, verify the complete model matches expected values (all wire_bits, bit_offsets, DLCs, names).
+- [x] **2.9 Full example schema integration test** — Load `example_schema.yaml` end-to-end, verify the complete model matches expected values (all wire_bits, bit_offsets, DLCs, names).
   - *Why*: Validates the entire schema pipeline works together.
   - *Test*: Assert all derived values for every field in every message match design.md examples.
 
