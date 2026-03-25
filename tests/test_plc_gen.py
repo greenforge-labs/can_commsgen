@@ -102,3 +102,17 @@ def test_pc_state_recv_generation(
     generated = (tmp_path / "PC_STATE_RECV.st").read_text()
     expected = (golden_plc_dir / "PC_STATE_RECV.st").read_text()
     assert generated == expected
+
+
+def test_main_input_generation(
+    example_schema_path: Path,
+    golden_plc_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Generated main_input.st matches the golden file."""
+    schema = load_schema([example_schema_path])
+    generate_plc(schema, tmp_path)
+
+    generated = (tmp_path / "main_input.st").read_text()
+    expected = (golden_plc_dir / "main_input.st").read_text()
+    assert generated == expected

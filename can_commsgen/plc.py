@@ -46,6 +46,9 @@ def generate_plc(schema: Schema, output_dir: Path) -> None:
     # Global Variable List (pc_to_plc fields + timeout booleans)
     _generate_gvl(schema, output_dir, env)
 
+    # main_input.st — calls all RECV FBs
+    _generate_main_input(schema, output_dir, env)
+
 
 def _generate_bit_helpers(output_dir: Path, env: jinja2.Environment) -> None:
     """Generate CAN_EXTRACT_BITS.st and CAN_INSERT_BITS.st helper functions."""
@@ -295,3 +298,22 @@ def _generate_send_fbs(
         )
 
         (output_dir / f"{name}.st").write_text(rendered)
+
+
+def _generate_main_input(
+    schema: Schema, output_dir: Path, env: jinja2.Environment
+) -> None:
+    """Generate main_input.st calling all RECV FBs."""
+    template = env.get_template("main_input.st.j2")
+
+    recv_fbs = [
+        {"fb_name": fb_name(msg.name, msg.direction)}
+        for msg in schema.messages
+        if msg.direction == "pc_to_plc"
+    ]
+
+    rendered = template.render(
+        recv_fbs=recv_fbs,
+        can_channel=schema.plc.can_channel,
+    )
+    (output_dir / "main_input.st").write_text(rendered)

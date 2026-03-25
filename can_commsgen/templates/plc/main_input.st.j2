@@ -1,0 +1,4 @@
+(* THIS FILE IS AUTO-GENERATED. DO NOT EDIT. *)
+{% for recv in recv_fbs %}
+{{ recv.fb_name }}(channel := ifmDevice.CAN_CHANNEL.{{ can_channel }});
+{% endfor %}
