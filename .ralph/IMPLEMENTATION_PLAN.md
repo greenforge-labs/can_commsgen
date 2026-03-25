@@ -106,7 +106,7 @@
   - *Why*: Wires RECV FBs into the PLC's main scan cycle.
   - *Test*: Generated `main_input.st` matches golden file.
 
-- [ ] **3.7 Wire up `generate_plc()` function** — `plc.py` exposes `generate_plc(schema: Schema, output_dir: Path)` that renders all templates and writes all files.
+- [x] **3.7 Wire up `generate_plc()` function** — `plc.py` exposes `generate_plc(schema: Schema, output_dir: Path)` that renders all templates and writes all files.
   - *Why*: Single entry point for PLC generation used by CLI.
   - *Test*: All 8 PLC golden file comparisons pass in `tests/test_plc_gen.py`.
 
