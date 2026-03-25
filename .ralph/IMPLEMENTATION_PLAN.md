@@ -154,7 +154,7 @@
 
 > **Goal**: End-to-end confidence that the full pipeline produces correct output.
 
-- [ ] **7.1 End-to-end snapshot test** — Single test that runs the CLI against `example_schema.yaml`, then compares ALL output files (8 PLC + 1 C++ + 1 report) against golden files.
+- [x] **7.1 End-to-end snapshot test** — Single test that runs the CLI against `example_schema.yaml`, then compares ALL output files (8 PLC + 1 C++ + 1 report) against golden files.
   - *Why*: Catches regressions across the full pipeline in one shot.
   - *Test*: All golden file comparisons pass.
 
