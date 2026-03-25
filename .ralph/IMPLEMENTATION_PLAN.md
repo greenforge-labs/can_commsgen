@@ -124,7 +124,7 @@
   - *Why*: Single entry point for C++ generation used by CLI.
   - *Test*: Snapshot test in `tests/test_cpp_gen.py` passes.
 
-- [ ] **4.3 C++ roundtrip test integration** — Pytest test that: generates `can_messages.hpp` → copies to `tests/cpp_roundtrip/generated/` → runs cmake build → runs ctest. Skip if no C++ compiler.
+- [x] **4.3 C++ roundtrip test integration** — Pytest test that: generates `can_messages.hpp` → copies to `tests/cpp_roundtrip/generated/` → runs cmake build → runs ctest. Skip if no C++ compiler.
   - *Why*: Proves bitpacking correctness end-to-end — the 34 roundtrip tests verify parse(build(x)) == x within resolution.
   - *Test*: `tests/test_cpp_gen.py` C++ roundtrip test passes (all 34 assertions).
 
