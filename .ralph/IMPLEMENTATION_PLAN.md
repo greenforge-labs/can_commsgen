@@ -82,7 +82,7 @@
 
 > **Goal**: `can_commsgen/plc.py` generates all PLC ST files matching the golden files byte-for-byte.
 
-- [ ] **3.1 Implement `enum.st.j2` template + generation** — Produces `{EnumName}.st` with `qualified_only`, `strict` attributes, values, backing type.
+- [x] **3.1 Implement `enum.st.j2` template + generation** — Produces `{EnumName}.st` with `qualified_only`, `strict` attributes, values, backing type.
   - *Why*: Enum files are standalone and have no dependencies on other templates.
   - *Test*: Generated `DriveMode.st` matches `tests/golden/plc/DriveMode.st`.
 
