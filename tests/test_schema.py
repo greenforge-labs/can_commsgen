@@ -4,6 +4,13 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+from can_commsgen.schema import (
+    PlcConfig,
+    Schema,
+    SchemaError,
+    load_schema,
+)
+
 SCHEMA_JSON_PATH = Path(__file__).parent.parent / "schema.json"
 
 
@@ -14,6 +21,9 @@ def json_schema() -> dict:
 
     with open(SCHEMA_JSON_PATH) as f:
         return json.load(f)
+
+
+# ── JSON Schema structural validation tests ─────────────────────────────────
 
 
 def test_example_schema_loads(example_schema_raw: dict) -> None:
@@ -76,3 +86,138 @@ def test_invalid_schema_rejected(snippet: dict, expected_error: str, json_schema
     """Invalid YAML snippets must be rejected by schema.json."""
     with pytest.raises(jsonschema.ValidationError, match=re.escape(expected_error)):
         jsonschema.validate(instance=snippet, schema=json_schema)
+
+
+# ── load_schema() tests ─────────────────────────────────────────────────────
+
+
+def test_load_example_schema(example_schema_path: Path) -> None:
+    """Loading example_schema.yaml returns a Schema with 1 enum and 3 messages."""
+    schema = load_schema([example_schema_path])
+
+    assert isinstance(schema, Schema)
+    assert isinstance(schema.plc, PlcConfig)
+    assert schema.plc.can_channel == "CHAN_0"
+
+    assert len(schema.enums) == 1
+    assert schema.enums[0].name == "DriveMode"
+    assert schema.enums[0].values == {"IDLE": 0, "VELOCITY": 1, "POSITION": 2, "TORQUE": 3}
+
+    assert len(schema.messages) == 3
+    assert schema.messages[0].name == "motor_command"
+    assert schema.messages[1].name == "drive_status"
+    assert schema.messages[2].name == "pc_state"
+
+
+def test_load_schema_message_fields(example_schema_path: Path) -> None:
+    """Verify fields are correctly parsed from the example schema."""
+    schema = load_schema([example_schema_path])
+
+    motor_cmd = schema.messages[0]
+    assert motor_cmd.id == 0x00000100
+    assert motor_cmd.direction == "pc_to_plc"
+    assert motor_cmd.timeout_ms == 500
+    assert len(motor_cmd.fields) == 2
+
+    vel = motor_cmd.fields[0]
+    assert vel.name == "target_velocity"
+    assert vel.type == "real"
+    assert vel.min == -3200.0
+    assert vel.max == 3200.0
+    assert vel.resolution == 0.1
+    assert vel.unit == "rpm"
+
+    torque = motor_cmd.fields[1]
+    assert torque.name == "torque_limit"
+    assert torque.type == "real"
+    assert torque.min == 0.0
+    assert torque.max == 655.35
+    assert torque.resolution == 0.01
+    assert torque.unit == "Nm"
+
+
+def test_load_schema_message_no_timeout(example_schema_path: Path) -> None:
+    """Messages without timeout_ms should have None."""
+    schema = load_schema([example_schema_path])
+    drive_status = schema.messages[1]
+    assert drive_status.timeout_ms is None
+
+
+def test_load_schema_field_optional_properties(example_schema_path: Path) -> None:
+    """Fields without min/max/resolution/unit have None for those."""
+    schema = load_schema([example_schema_path])
+    fault_code = schema.messages[1].fields[3]  # drive_status.fault_code
+    assert fault_code.name == "fault_code"
+    assert fault_code.type == "uint8"
+    assert fault_code.min is None
+    assert fault_code.max is None
+    assert fault_code.resolution is None
+    assert fault_code.unit is None
+
+
+def test_load_schema_enum_field(example_schema_path: Path) -> None:
+    """Fields referencing an enum type are loaded correctly."""
+    schema = load_schema([example_schema_path])
+    pc_state = schema.messages[2]
+    assert pc_state.name == "pc_state"
+    assert len(pc_state.fields) == 1
+    assert pc_state.fields[0].name == "drive_mode"
+    assert pc_state.fields[0].type == "DriveMode"
+
+
+def test_load_invalid_yaml_raises(tmp_path: Path) -> None:
+    """Loading a structurally invalid YAML raises SchemaError."""
+    bad = tmp_path / "bad.yaml"
+    bad.write_text('version: "2"\nplc:\n  can_channel: CHAN_0\nmessages:\n  - name: m\n    id: 1\n    direction: pc_to_plc\n    fields:\n      - name: f\n        type: bool\n')
+    with pytest.raises(SchemaError, match="'2' is not one of"):
+        load_schema([bad])
+
+
+def test_load_no_paths_raises() -> None:
+    """Calling load_schema with empty list raises SchemaError."""
+    with pytest.raises(SchemaError, match="No schema paths provided"):
+        load_schema([])
+
+
+def test_load_merge_multiple_files(tmp_path: Path) -> None:
+    """Multiple schema files should merge enums and messages."""
+    file1 = tmp_path / "a.yaml"
+    file1.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_0\n"
+        "enums:\n"
+        "  - name: Mode\n"
+        "    values:\n"
+        "      OFF: 0\n"
+        "      ON: 1\n"
+        "messages:\n"
+        "  - name: msg_a\n"
+        "    id: 0x100\n"
+        "    direction: pc_to_plc\n"
+        "    fields:\n"
+        "      - name: x\n"
+        "        type: bool\n"
+    )
+    file2 = tmp_path / "b.yaml"
+    file2.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_1\n"
+        "messages:\n"
+        "  - name: msg_b\n"
+        "    id: 0x200\n"
+        "    direction: plc_to_pc\n"
+        "    fields:\n"
+        "      - name: y\n"
+        "        type: uint8\n"
+    )
+
+    schema = load_schema([file1, file2])
+    # plc config from first file
+    assert schema.plc.can_channel == "CHAN_0"
+    # enums merged
+    assert len(schema.enums) == 1
+    assert schema.enums[0].name == "Mode"
+    # messages merged
+    assert len(schema.messages) == 2
+    assert schema.messages[0].name == "msg_a"
+    assert schema.messages[1].name == "msg_b"

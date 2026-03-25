@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
+
+import jsonschema
+import yaml
 
 
 # ── Type mappings ────────────────────────────────────────────────────────────
@@ -153,3 +158,104 @@ class Schema:
     plc: PlcConfig
     enums: list[EnumDef] = field(default_factory=list)
     messages: list[MessageDef] = field(default_factory=list)
+
+
+# ── Schema JSON path ────────────────────────────────────────────────────────
+
+def _find_schema_json() -> Path:
+    """Locate schema.json: check package dir first, then repo root."""
+    pkg = Path(__file__).parent / "schema.json"
+    if pkg.exists():
+        return pkg
+    repo = Path(__file__).parent.parent / "schema.json"
+    if repo.exists():
+        return repo
+    raise FileNotFoundError("schema.json not found")
+
+
+_SCHEMA_JSON_PATH = _find_schema_json()
+
+
+# ── Loading ─────────────────────────────────────────────────────────────────
+
+
+class SchemaError(Exception):
+    """Raised when schema loading or validation fails."""
+
+
+def _load_json_schema() -> dict:  # type: ignore[type-arg]
+    """Load the JSON Schema for CAN YAML structural validation."""
+    with open(_SCHEMA_JSON_PATH) as f:
+        return json.load(f)  # type: ignore[no-any-return]
+
+
+def _parse_field(raw: dict) -> FieldDef:  # type: ignore[type-arg]
+    """Convert a raw YAML field dict to a FieldDef dataclass."""
+    return FieldDef(
+        name=raw["name"],
+        type=raw["type"],
+        min=raw.get("min"),
+        max=raw.get("max"),
+        resolution=raw.get("resolution"),
+        unit=raw.get("unit"),
+    )
+
+
+def _parse_message(raw: dict) -> MessageDef:  # type: ignore[type-arg]
+    """Convert a raw YAML message dict to a MessageDef dataclass."""
+    return MessageDef(
+        name=raw["name"],
+        id=raw["id"],
+        direction=raw["direction"],
+        fields=[_parse_field(f) for f in raw["fields"]],
+        timeout_ms=raw.get("timeout_ms"),
+    )
+
+
+def _parse_enum(raw: dict) -> EnumDef:  # type: ignore[type-arg]
+    """Convert a raw YAML enum dict to an EnumDef dataclass."""
+    return EnumDef(
+        name=raw["name"],
+        values=raw["values"],
+    )
+
+
+def load_schema(paths: list[Path]) -> Schema:
+    """Load one or more YAML schema files, validate, merge, and return a Schema.
+
+    Multiple files are merged by combining their enums and messages lists.
+    The ``plc`` config is taken from the first file that declares it.
+    """
+    if not paths:
+        raise SchemaError("No schema paths provided")
+
+    json_schema = _load_json_schema()
+
+    merged_plc: PlcConfig | None = None
+    merged_enums: list[EnumDef] = []
+    merged_messages: list[MessageDef] = []
+
+    for path in paths:
+        with open(path) as f:
+            raw = yaml.safe_load(f)
+
+        # Structural validation via JSON Schema
+        try:
+            jsonschema.validate(instance=raw, schema=json_schema)
+        except jsonschema.ValidationError as e:
+            raise SchemaError(f"{path}: {e.message}") from e
+
+        # Merge plc config
+        if merged_plc is None:
+            merged_plc = PlcConfig(can_channel=raw["plc"]["can_channel"])
+
+        # Merge enums
+        for enum_raw in raw.get("enums", []):
+            merged_enums.append(_parse_enum(enum_raw))
+
+        # Merge messages
+        for msg_raw in raw["messages"]:
+            merged_messages.append(_parse_message(msg_raw))
+
+    assert merged_plc is not None  # guaranteed by non-empty paths + validation
+    return Schema(plc=merged_plc, enums=merged_enums, messages=merged_messages)
