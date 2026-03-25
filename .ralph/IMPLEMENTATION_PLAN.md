@@ -52,7 +52,7 @@
   - *Why*: First step of the processing pipeline (design.md 6.4).
   - *Test*: Loading `example_schema.yaml` returns a Schema with 1 enum and 3 messages. Loading invalid YAML raises a clear error.
 
-- [ ] **2.4 Implement wire type inference** — Match design.md section 2.4 exactly. Handle all five cases: `real` (wire_min/max from min/max/resolution, bits from formula), integer with range, integer bare, bool (1 bit), enum (ceil(log2(max+1))).
+- [x] **2.4 Implement wire type inference** — Match design.md section 2.4 exactly. Handle all five cases: `real` (wire_min/max from min/max/resolution, bits from formula), integer with range, integer bare, bool (1 bit), enum (ceil(log2(max+1))).
   - *Why*: Core bitpacking logic — all generators depend on correct wire_bits and wire_signed.
   - *Test*: Table-driven tests using the worked examples from design.md: `target_velocity` → 16 bits signed; `torque_limit` → 16 bits unsigned; `motor_temp` → 12 bits signed; `bus_voltage` → 10 bits unsigned; `fault_code` → 8 bits unsigned; `drive_mode` → 2 bits unsigned.
 

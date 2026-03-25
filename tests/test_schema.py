@@ -5,6 +5,7 @@ import jsonschema
 import pytest
 
 from can_commsgen.schema import (
+    FieldDef,
     PlcConfig,
     Schema,
     SchemaError,
@@ -221,3 +222,120 @@ def test_load_merge_multiple_files(tmp_path: Path) -> None:
     assert len(schema.messages) == 2
     assert schema.messages[0].name == "msg_a"
     assert schema.messages[1].name == "msg_b"
+
+
+# ── Wire type inference tests ────────────────────────────────────────────────
+
+
+def _find_field(schema: Schema, msg_name: str, field_name: str) -> FieldDef:
+    """Helper to find a field by message and field name."""
+    for msg in schema.messages:
+        if msg.name == msg_name:
+            for f in msg.fields:
+                if f.name == field_name:
+                    return f
+    raise ValueError(f"Field {msg_name}.{field_name} not found")
+
+
+@pytest.mark.parametrize(
+    "msg_name, field_name, expected_bits, expected_signed, expected_wire_min, expected_wire_max",
+    [
+        pytest.param(
+            "motor_command", "target_velocity", 16, True, -32000, 32000,
+            id="real_signed_target_velocity",
+        ),
+        pytest.param(
+            "motor_command", "torque_limit", 16, False, 0, 65535,
+            id="real_unsigned_torque_limit",
+        ),
+        pytest.param(
+            "drive_status", "motor_temp", 12, True, -400, 2000,
+            id="real_signed_motor_temp",
+        ),
+        pytest.param(
+            "drive_status", "bus_voltage", 10, False, 0, 1023,
+            id="real_unsigned_bus_voltage",
+        ),
+        pytest.param(
+            "drive_status", "fault_code", 8, False, 0, 255,
+            id="integer_bare_fault_code",
+        ),
+        pytest.param(
+            "pc_state", "drive_mode", 2, False, 0, 3,
+            id="enum_drive_mode",
+        ),
+    ],
+)
+def test_wire_type_inference(
+    example_schema_path: Path,
+    msg_name: str,
+    field_name: str,
+    expected_bits: int,
+    expected_signed: bool,
+    expected_wire_min: int,
+    expected_wire_max: int,
+) -> None:
+    """Wire type inference matches design.md worked examples."""
+    schema = load_schema([example_schema_path])
+    f = _find_field(schema, msg_name, field_name)
+
+    assert f.wire_bits == expected_bits, f"wire_bits: {f.wire_bits} != {expected_bits}"
+    assert f.wire_signed == expected_signed, f"wire_signed: {f.wire_signed} != {expected_signed}"
+    assert f.wire_min == expected_wire_min, f"wire_min: {f.wire_min} != {expected_wire_min}"
+    assert f.wire_max == expected_wire_max, f"wire_max: {f.wire_max} != {expected_wire_max}"
+
+
+def test_enum_derived_properties(example_schema_path: Path) -> None:
+    """Enum backing type and wire bits are derived correctly."""
+    schema = load_schema([example_schema_path])
+    drive_mode = schema.enums[0]
+    assert drive_mode.name == "DriveMode"
+    assert drive_mode.wire_bits == 2
+    assert drive_mode.backing_type_plc == "USINT"
+    assert drive_mode.backing_type_cpp == "uint8_t"
+
+
+def test_bool_wire_type(tmp_path: Path) -> None:
+    """Bool fields are always 1 bit, unsigned."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_0\n"
+        "messages:\n"
+        "  - name: test_msg\n"
+        "    id: 0x100\n"
+        "    direction: pc_to_plc\n"
+        "    fields:\n"
+        "      - name: flag\n"
+        "        type: bool\n"
+    )
+    schema = load_schema([yaml_file])
+    f = schema.messages[0].fields[0]
+    assert f.wire_bits == 1
+    assert f.wire_signed is False
+    assert f.wire_min == 0
+    assert f.wire_max == 1
+
+
+def test_integer_with_range(tmp_path: Path) -> None:
+    """Integer with explicit min/max is bitpacked to minimum bits."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_0\n"
+        "messages:\n"
+        "  - name: test_msg\n"
+        "    id: 0x100\n"
+        "    direction: pc_to_plc\n"
+        "    fields:\n"
+        "      - name: voltage_raw\n"
+        "        type: uint16\n"
+        "        min: 0\n"
+        "        max: 1023\n"
+    )
+    schema = load_schema([yaml_file])
+    f = schema.messages[0].fields[0]
+    assert f.wire_bits == 10
+    assert f.wire_signed is False
+    assert f.wire_min == 0
+    assert f.wire_max == 1023

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -220,6 +221,94 @@ def _parse_enum(raw: dict) -> EnumDef:  # type: ignore[type-arg]
     )
 
 
+def _bits_for_unsigned(wire_max: int) -> int:
+    """Minimum bits to represent [0, wire_max] unsigned."""
+    if wire_max == 0:
+        return 1
+    return math.ceil(math.log2(wire_max + 1))
+
+
+def _bits_for_signed(wire_min: int, wire_max: int) -> int:
+    """Minimum bits to represent [wire_min, wire_max] signed (two's complement)."""
+    magnitude = max(abs(wire_min), abs(wire_max))
+    if magnitude == 0:
+        return 1
+    return 1 + math.ceil(math.log2(magnitude + 1))
+
+
+def _infer_wire_type(
+    f: FieldDef,
+    enum_map: dict[str, EnumDef],
+) -> None:
+    """Populate derived wire fields (wire_bits, wire_signed, wire_min, wire_max) on a FieldDef."""
+    typ = f.type
+
+    if typ == "bool":
+        f.wire_bits = 1
+        f.wire_signed = False
+        f.wire_min = 0
+        f.wire_max = 1
+        return
+
+    if typ in enum_map:
+        enum = enum_map[typ]
+        max_val = max(enum.values.values())
+        f.wire_bits = _bits_for_unsigned(max_val)
+        f.wire_signed = False
+        f.wire_min = 0
+        f.wire_max = max_val
+        return
+
+    if typ == "real":
+        # real requires min, max, resolution (validation enforced elsewhere)
+        assert f.min is not None and f.max is not None and f.resolution is not None
+        f.wire_min = round(f.min / f.resolution)
+        f.wire_max = round(f.max / f.resolution)
+        f.wire_signed = f.min < 0
+        if f.wire_signed:
+            f.wire_bits = _bits_for_signed(f.wire_min, f.wire_max)
+        else:
+            f.wire_bits = _bits_for_unsigned(f.wire_max)
+        return
+
+    # Integer type
+    if typ not in ENDPOINT_TYPES:
+        return  # unknown type; validation catches this elsewhere
+
+    _plc, _cpp, full_width, is_signed = ENDPOINT_TYPES[typ]
+
+    if f.min is not None and f.max is not None:
+        # Integer with explicit range
+        f.wire_min = int(f.min)
+        f.wire_max = int(f.max)
+        f.wire_signed = is_signed
+        if is_signed:
+            f.wire_bits = _bits_for_signed(f.wire_min, f.wire_max)
+        else:
+            f.wire_bits = _bits_for_unsigned(f.wire_max)
+    else:
+        # Bare integer — full endpoint type width
+        f.wire_signed = is_signed
+        f.wire_bits = full_width
+        if is_signed:
+            type_min, type_max = INTEGER_RANGES[typ]
+            f.wire_min = type_min
+            f.wire_max = type_max
+        else:
+            f.wire_min = 0
+            f.wire_max = INTEGER_RANGES[typ][1]
+
+
+def _process_enums(enums: list[EnumDef]) -> None:
+    """Populate derived fields on EnumDef instances."""
+    for enum in enums:
+        max_val = max(enum.values.values()) if enum.values else 0
+        enum.wire_bits = _bits_for_unsigned(max_val)
+        plc_bt, cpp_bt = enum_backing_type(max_val)
+        enum.backing_type_plc = plc_bt
+        enum.backing_type_cpp = cpp_bt
+
+
 def load_schema(paths: list[Path]) -> Schema:
     """Load one or more YAML schema files, validate, merge, and return a Schema.
 
@@ -258,4 +347,18 @@ def load_schema(paths: list[Path]) -> Schema:
             merged_messages.append(_parse_message(msg_raw))
 
     assert merged_plc is not None  # guaranteed by non-empty paths + validation
+
+    # Derive enum properties
+    _process_enums(merged_enums)
+
+    # Build enum lookup for wire type inference
+    enum_map = {e.name: e for e in merged_enums}
+
+    # Derive wire types and naming for all fields
+    for msg in merged_messages:
+        for f in msg.fields:
+            _infer_wire_type(f, enum_map)
+            f.plc_var_name = plc_var_name(f.name, f.unit)
+            f.cpp_var_name = cpp_var_name(f.name, f.unit)
+
     return Schema(plc=merged_plc, enums=merged_enums, messages=merged_messages)
