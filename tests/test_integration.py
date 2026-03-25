@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from can_commsgen.cli import main
@@ -84,4 +87,67 @@ def test_e2e_snapshot_all_outputs(tmp_path: Path) -> None:
     generated_cpp_files = sorted(f.name for f in cpp_dir.iterdir())
     assert generated_cpp_files == sorted(GOLDEN_CPP_FILES), (
         f"Unexpected C++ files: {set(generated_cpp_files) - set(GOLDEN_CPP_FILES)}"
+    )
+
+
+@pytest.mark.skipif(
+    shutil.which("cmake") is None or shutil.which("g++") is None,
+    reason="C++ toolchain (cmake, g++) not available",
+)
+def test_cpp_roundtrip_via_cli(tmp_path: Path) -> None:
+    """Run CLI to generate C++, then compile and run the C++ roundtrip tests."""
+    cpp_dir = tmp_path / "cpp"
+    plc_dir = tmp_path / "plc"
+
+    # Generate via CLI
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "--schema", str(EXAMPLE_SCHEMA),
+            "--out-plc", str(plc_dir),
+            "--out-cpp", str(cpp_dir),
+        ],
+    )
+    assert result.exit_code == 0, f"CLI failed:\n{result.output}"
+
+    # Copy generated header into the roundtrip test's expected location
+    roundtrip_dir = Path(__file__).parent / "cpp_roundtrip"
+    generated_dir = roundtrip_dir / "generated"
+    generated_dir.mkdir(exist_ok=True)
+    shutil.copy2(cpp_dir / "can_messages.hpp", generated_dir / "can_messages.hpp")
+
+    # Build with cmake
+    build_dir = tmp_path / "build"
+    build_dir.mkdir()
+
+    cmake_result = subprocess.run(
+        ["cmake", str(roundtrip_dir)],
+        cwd=build_dir,
+        capture_output=True,
+        text=True,
+    )
+    assert cmake_result.returncode == 0, (
+        f"cmake configure failed:\n{cmake_result.stderr}"
+    )
+
+    build_result = subprocess.run(
+        ["cmake", "--build", "."],
+        cwd=build_dir,
+        capture_output=True,
+        text=True,
+    )
+    assert build_result.returncode == 0, (
+        f"cmake build failed:\n{build_result.stderr}"
+    )
+
+    # Run roundtrip tests via ctest
+    test_result = subprocess.run(
+        ["ctest", "--output-on-failure"],
+        cwd=build_dir,
+        capture_output=True,
+        text=True,
+    )
+    assert test_result.returncode == 0, (
+        f"C++ roundtrip tests failed:\n{test_result.stdout}\n{test_result.stderr}"
     )
