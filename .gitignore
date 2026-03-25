@@ -210,3 +210,6 @@ __marimo__/
 flake.nix
 flake.lock
 .direnv/
+
+# C++ roundtrip test generated output
+tests/cpp_roundtrip/generated/
