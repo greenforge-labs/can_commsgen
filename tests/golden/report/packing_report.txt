@@ -1,0 +1,30 @@
+can_commsgen packing report
+Schema: example_schema.yaml
+
+================================================================================
+motor_command  (0x00000100, pc_to_plc, timeout 500ms)
+  DLC: 4 bytes (32 bits used / 64 max)
+--------------------------------------------------------------------------------
+  Bit offset  Bits  Signed  Field               Type   Wire range          Physical range          Resolution
+  0           16    yes     target_velocity      real   [-32000, 32000]     [-3200.0, 3200.0] rpm   0.1
+  16          16    no      torque_limit         real   [0, 65535]          [0.0, 655.35] Nm        0.01
+================================================================================
+
+================================================================================
+drive_status  (0x00000200, plc_to_pc)
+  DLC: 6 bytes (46 bits used / 64 max)
+--------------------------------------------------------------------------------
+  Bit offset  Bits  Signed  Field               Type   Wire range          Physical range          Resolution
+  0           16    yes     actual_velocity      real   [-32000, 32000]     [-3200.0, 3200.0] rpm   0.1
+  16          12    yes     motor_temp           real   [-400, 2000]        [-40.0, 200.0] degC     0.1
+  28          10    no      bus_voltage          real   [0, 1023]           [0.0, 102.3] V          0.1
+  38          8     no      fault_code           uint8  [0, 255]            --                      --
+================================================================================
+
+================================================================================
+pc_state  (0x00000300, pc_to_plc, timeout 1000ms)
+  DLC: 1 bytes (2 bits used / 64 max)
+--------------------------------------------------------------------------------
+  Bit offset  Bits  Signed  Field               Type        Wire range   Physical range  Resolution
+  0           2     no      drive_mode           DriveMode   [0, 3]      --              --
+================================================================================

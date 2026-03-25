@@ -1,0 +1,64 @@
+version: "1"
+
+plc:
+  can_channel: CHAN_0
+
+enums:
+  - name: DriveMode
+    values:
+      IDLE:     0
+      VELOCITY: 1
+      POSITION: 2
+      TORQUE:   3
+
+messages:
+  - name: motor_command
+    id: 0x00000100
+    direction: pc_to_plc
+    timeout_ms: 500
+    fields:
+      - name: target_velocity
+        type: real
+        min: -3200.0
+        max: 3200.0
+        resolution: 0.1
+        unit: rpm
+      - name: torque_limit
+        type: real
+        min: 0.0
+        max: 655.35
+        resolution: 0.01
+        unit: Nm
+
+  - name: drive_status
+    id: 0x00000200
+    direction: plc_to_pc
+    fields:
+      - name: actual_velocity
+        type: real
+        min: -3200.0
+        max: 3200.0
+        resolution: 0.1
+        unit: rpm
+      - name: motor_temp
+        type: real
+        min: -40.0
+        max: 200.0
+        resolution: 0.1
+        unit: degC
+      - name: bus_voltage
+        type: real
+        min: 0.0
+        max: 102.3
+        resolution: 0.1
+        unit: V
+      - name: fault_code
+        type: uint8
+
+  - name: pc_state
+    id: 0x00000300
+    direction: pc_to_plc
+    timeout_ms: 1000
+    fields:
+      - name: drive_mode
+        type: DriveMode

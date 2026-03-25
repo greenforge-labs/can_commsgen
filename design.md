@@ -457,7 +457,7 @@ END_VAR
 
 data := [8(0)];
 CAN_INSERT_BITS(TO_LINT(REAL_TO_INT(actualVelocity_rpm / 0.1)), 0, 16, data);
-CAN_INSERT_BITS(TO_LINT(REAL_TO_UINT(motorTemp_degC / 0.1)),    16, 12, data);
+CAN_INSERT_BITS(TO_LINT(REAL_TO_INT(motorTemp_degC / 0.1)),     16, 12, data);
 CAN_INSERT_BITS(TO_LINT(REAL_TO_UINT(busVoltage_V / 0.1)),      28, 10, data);
 CAN_INSERT_BITS(TO_LINT(faultCode),                              38, 8,  data);
 
@@ -844,7 +844,7 @@ motor_command  (0x00000100, pc_to_plc, timeout 500ms)
 
 ================================================================================
 drive_status  (0x00000200, plc_to_pc)
-  DLC: 6 bytes (42 bits used / 64 max)
+  DLC: 6 bytes (46 bits used / 64 max)
 --------------------------------------------------------------------------------
   Bit offset  Bits  Signed  Field               Type   Wire range          Physical range          Resolution
   0           16    yes     actual_velocity      real   [-32000, 32000]     [-3200.0, 3200.0] rpm   0.1
