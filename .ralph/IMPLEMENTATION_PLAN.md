@@ -56,7 +56,7 @@
   - *Why*: Core bitpacking logic — all generators depend on correct wire_bits and wire_signed.
   - *Test*: Table-driven tests using the worked examples from design.md: `target_velocity` → 16 bits signed; `torque_limit` → 16 bits unsigned; `motor_temp` → 12 bits signed; `bus_voltage` → 10 bits unsigned; `fault_code` → 8 bits unsigned; `drive_mode` → 2 bits unsigned.
 
-- [ ] **2.5 Implement naming transforms** — PLC: `snake_case` → `camelCase` + `_unit`; C++: `snake_case` + `_unit`; FB names: `UPPER_SNAKE_CASE` + `_RECV`/`_SEND`; struct names: `PascalCase`.
+- [x] **2.5 Implement naming transforms** — PLC: `snake_case` → `camelCase` + `_unit`; C++: `snake_case` + `_unit`; FB names: `UPPER_SNAKE_CASE` + `_RECV`/`_SEND`; struct names: `PascalCase`.
   - *Why*: Every generated file uses these transforms.
   - *Test*: `("target_velocity", "rpm")` → PLC `targetVelocity_rpm`, C++ `target_velocity_rpm`. `("fault_code", None)` → PLC `faultCode`, C++ `fault_code`. `"motor_command"` → FB `MOTOR_COMMAND_RECV`, struct `MotorCommand`.
 
