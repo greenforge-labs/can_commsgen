@@ -86,7 +86,7 @@
   - *Why*: Enum files are standalone and have no dependencies on other templates.
   - *Test*: Generated `DriveMode.st` matches `tests/golden/plc/DriveMode.st`.
 
-- [ ] **3.2 Implement `bit_helpers.st.j2` template + generation** — Produces `CAN_EXTRACT_BITS.st` and `CAN_INSERT_BITS.st`. These are static (no schema data needed), but generated so they ship with the output.
+- [x] **3.2 Implement `bit_helpers.st.j2` template + generation** — Produces `CAN_EXTRACT_BITS.st` and `CAN_INSERT_BITS.st`. These are static (no schema data needed), but generated so they ship with the output.
   - *Why*: All RECV/SEND FBs depend on these helpers.
   - *Test*: Generated files match `tests/golden/plc/CAN_EXTRACT_BITS.st` and `tests/golden/plc/CAN_INSERT_BITS.st`.
 
