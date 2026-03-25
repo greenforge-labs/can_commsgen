@@ -134,7 +134,7 @@
 
 > **Goal**: `can_commsgen/report.py` generates a text packing report matching the golden file.
 
-- [ ] **5.1 Implement `generate_report()` function** — Produces fixed-width-column text report with per-message header (name, CAN ID, direction, timeout, DLC, bits used) and per-field table (bit offset, bits, signed, name, type, wire range, physical range with unit, resolution). Fields without physical range show `--`.
+- [x] **5.1 Implement `generate_report()` function** — Produces fixed-width-column text report with per-message header (name, CAN ID, direction, timeout, DLC, bits used) and per-field table (bit offset, bits, signed, name, type, wire range, physical range with unit, resolution). Fields without physical range show `--`.
   - *Why*: Human-readable report for code review diffs.
   - *Test*: Generated report matches `tests/golden/report/packing_report.txt` in `tests/test_report_gen.py`.
 
