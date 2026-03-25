@@ -9,7 +9,11 @@ from can_commsgen.schema import (
     PlcConfig,
     Schema,
     SchemaError,
+    cpp_var_name,
+    fb_name,
     load_schema,
+    plc_var_name,
+    struct_name,
 )
 
 SCHEMA_JSON_PATH = Path(__file__).parent.parent / "schema.json"
@@ -339,3 +343,80 @@ def test_integer_with_range(tmp_path: Path) -> None:
     assert f.wire_signed is False
     assert f.wire_min == 0
     assert f.wire_max == 1023
+
+
+# ── Naming transform tests ──────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "field_name, unit, expected",
+    [
+        pytest.param("target_velocity", "rpm", "targetVelocity_rpm", id="with_unit"),
+        pytest.param("fault_code", None, "faultCode", id="no_unit"),
+        pytest.param("drive_mode", None, "driveMode", id="no_unit_two_words"),
+        pytest.param("bus_voltage", "V", "busVoltage_V", id="single_char_unit"),
+    ],
+)
+def test_plc_var_name(field_name: str, unit: str | None, expected: str) -> None:
+    """PLC variable names: camelCase + optional _unit suffix."""
+    assert plc_var_name(field_name, unit) == expected
+
+
+@pytest.mark.parametrize(
+    "field_name, unit, expected",
+    [
+        pytest.param("target_velocity", "rpm", "target_velocity_rpm", id="with_unit"),
+        pytest.param("fault_code", None, "fault_code", id="no_unit"),
+        pytest.param("drive_mode", None, "drive_mode", id="no_unit_two_words"),
+        pytest.param("bus_voltage", "V", "bus_voltage_V", id="single_char_unit"),
+    ],
+)
+def test_cpp_var_name(field_name: str, unit: str | None, expected: str) -> None:
+    """C++ variable names: snake_case + optional _unit suffix."""
+    assert cpp_var_name(field_name, unit) == expected
+
+
+@pytest.mark.parametrize(
+    "message_name, direction, expected",
+    [
+        pytest.param("motor_command", "pc_to_plc", "MOTOR_COMMAND_RECV", id="recv"),
+        pytest.param("drive_status", "plc_to_pc", "DRIVE_STATUS_SEND", id="send"),
+        pytest.param("pc_state", "pc_to_plc", "PC_STATE_RECV", id="recv_two_words"),
+    ],
+)
+def test_fb_name(message_name: str, direction: str, expected: str) -> None:
+    """Function block names: UPPER_SNAKE_CASE + _RECV/_SEND."""
+    assert fb_name(message_name, direction) == expected
+
+
+@pytest.mark.parametrize(
+    "message_name, expected",
+    [
+        pytest.param("motor_command", "MotorCommand", id="two_words"),
+        pytest.param("drive_status", "DriveStatus", id="two_words_2"),
+        pytest.param("pc_state", "PcState", id="two_words_3"),
+    ],
+)
+def test_struct_name(message_name: str, expected: str) -> None:
+    """C++ struct names: PascalCase from snake_case."""
+    assert struct_name(message_name) == expected
+
+
+def test_naming_applied_in_load_schema(example_schema_path: Path) -> None:
+    """Verify naming transforms are applied to fields during schema loading."""
+    schema = load_schema([example_schema_path])
+
+    # target_velocity with unit rpm
+    vel = _find_field(schema, "motor_command", "target_velocity")
+    assert vel.plc_var_name == "targetVelocity_rpm"
+    assert vel.cpp_var_name == "target_velocity_rpm"
+
+    # fault_code with no unit
+    fault = _find_field(schema, "drive_status", "fault_code")
+    assert fault.plc_var_name == "faultCode"
+    assert fault.cpp_var_name == "fault_code"
+
+    # drive_mode enum field with no unit
+    mode = _find_field(schema, "pc_state", "drive_mode")
+    assert mode.plc_var_name == "driveMode"
+    assert mode.cpp_var_name == "drive_mode"
