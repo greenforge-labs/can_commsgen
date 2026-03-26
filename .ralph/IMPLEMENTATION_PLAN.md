@@ -2,7 +2,7 @@
 
 **Status**: Core generator is complete (schema model, PLC ST, C++ header, packing report, CLI, integration tests — 89 tests passing). Two feature specs remain: CAN interface generation and rich error messages.
 
-**Baseline**: All quality gates pass. `pixi run ruff check && pixi run pyright && pixi run pytest` — 89 tests, 0 errors.
+**Baseline**: All quality gates pass. `pixi run ruff check && pixi run pyright && pixi run pytest` — 93 tests, 0 errors.
 
 ---
 
@@ -22,7 +22,7 @@
   - *Why*: Current format `"motor_command.target_velocity: range [-100, 1024] exceeds uint8 bounds [0, 255]"` requires the user to figure out the fix themselves.
   - *Test*: Update existing range mismatch tests in `tests/test_schema.py` to match new multi-line format.
 
-- [ ] **8.4 Verify all existing tests pass with updated match patterns** — After reformatting all three error categories, run the full test suite. Existing validation tests that assert on error substrings via `pytest.raises(SchemaError, match=...)` must be updated to match the new format while still verifying the same conditions trigger.
+- [x] **8.4 Verify all existing tests pass with updated match patterns** — After reformatting all three error categories, run the full test suite. Existing validation tests that assert on error substrings via `pytest.raises(SchemaError, match=...)` must be updated to match the new format while still verifying the same conditions trigger.
   - *Why*: Error message changes must not break existing test coverage or mask regressions.
   - *Test*: All 89+ tests pass. `pixi run pytest tests/` green.
 
