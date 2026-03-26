@@ -41,7 +41,7 @@
   - *Why*: Template-driven generation keeps the output consistent with schema changes.
   - *Test*: Template renders without Jinja2 errors (verified in 9.4).
 
-- [ ] **9.3 Create `can_interface.cpp.j2` template** — Jinja2 template producing the implementation with: includes (`poll.h`, `sys/socket.h`, `sys/ioctl.h`, `net/if.h`, `unistd.h`, `cstring`, `stdexcept`), `Impl` struct (socket fd), constructor (socket creation, bind, filter setup), destructor, `process_frames()` (non-blocking read, CAN ID dispatch to `parse_*` + handler, `check_timeouts()`), `wait_readable()` (poll), `send()` overloads (call `build_*`, write to socket), `compute_filters()`, `check_timeouts()`.
+- [x] **9.3 Create `can_interface.cpp.j2` template** — Jinja2 template producing the implementation with: includes (`poll.h`, `sys/socket.h`, `sys/ioctl.h`, `net/if.h`, `unistd.h`, `cstring`, `stdexcept`), `Impl` struct (socket fd), constructor (socket creation, bind, filter setup), destructor, `process_frames()` (non-blocking read, CAN ID dispatch to `parse_*` + handler, `check_timeouts()`), `wait_readable()` (poll), `send()` overloads (call `build_*`, write to socket), `compute_filters()`, `check_timeouts()`.
   - *Why*: Implementation file contains all SocketCAN system calls and dispatch logic.
   - *Test*: Template renders without Jinja2 errors (verified in 9.4).
 
