@@ -188,16 +188,52 @@ def _message_data(msg: MessageDef, enum_names: set[str]) -> dict[str, object]:
     }
 
 
+def _interface_message_data(msg: MessageDef) -> dict[str, object]:
+    """Prepare template data for a message in the interface templates."""
+    return {
+        "name": msg.name,
+        "struct_name": struct_name(msg.name),
+        "can_id_hex": f"0x{msg.id:08X}",
+        "comment": _msg_comment(msg),
+        "timeout_ms": msg.timeout_ms,
+    }
+
+
 def generate_cpp(schema: Schema, output_dir: Path) -> None:
-    """Generate can_messages.hpp into output_dir."""
+    """Generate can_messages.hpp, can_interface.hpp, and can_interface.cpp."""
     output_dir.mkdir(parents=True, exist_ok=True)
     env = _template_env()
-    template = env.get_template("can_messages.hpp.j2")
 
     enum_names = {e.name for e in schema.enums}
 
+    # --- can_messages.hpp ---
     enums = [_enum_data(e) for e in schema.enums]
     messages = [_message_data(m, enum_names) for m in schema.messages]
 
-    rendered = template.render(enums=enums, messages=messages)
+    rendered = env.get_template("can_messages.hpp.j2").render(
+        enums=enums, messages=messages,
+    )
     (output_dir / "can_messages.hpp").write_text(rendered)
+
+    # --- can_interface.hpp / .cpp ---
+    plc_to_pc = [
+        _interface_message_data(m)
+        for m in schema.messages
+        if m.direction == "plc_to_pc"
+    ]
+    pc_to_plc = [
+        _interface_message_data(m)
+        for m in schema.messages
+        if m.direction == "pc_to_plc"
+    ]
+    timeout_msgs = [m for m in plc_to_pc if m["timeout_ms"] is not None]
+
+    interface_ctx = {
+        "plc_to_pc_messages": plc_to_pc,
+        "pc_to_plc_messages": pc_to_plc,
+        "timeout_messages": timeout_msgs,
+    }
+
+    for filename in ("can_interface.hpp", "can_interface.cpp"):
+        rendered = env.get_template(f"{filename}.j2").render(**interface_ctx)
+        (output_dir / filename).write_text(rendered)

@@ -26,6 +26,34 @@ def test_can_messages_hpp_generation(
     assert generated == expected
 
 
+def test_can_interface_hpp_generation(
+    example_schema_path: Path,
+    golden_cpp_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Generated can_interface.hpp matches the golden file."""
+    schema = load_schema([example_schema_path])
+    generate_cpp(schema, tmp_path)
+
+    generated = (tmp_path / "can_interface.hpp").read_text()
+    expected = (golden_cpp_dir / "can_interface.hpp").read_text()
+    assert generated == expected
+
+
+def test_can_interface_cpp_generation(
+    example_schema_path: Path,
+    golden_cpp_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """Generated can_interface.cpp matches the golden file."""
+    schema = load_schema([example_schema_path])
+    generate_cpp(schema, tmp_path)
+
+    generated = (tmp_path / "can_interface.cpp").read_text()
+    expected = (golden_cpp_dir / "can_interface.cpp").read_text()
+    assert generated == expected
+
+
 @pytest.mark.skipif(
     shutil.which("cmake") is None or shutil.which("g++") is None,
     reason="C++ toolchain (cmake, g++) not available",

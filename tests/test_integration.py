@@ -27,6 +27,8 @@ GOLDEN_PLC_FILES = [
 ]
 
 GOLDEN_CPP_FILES = [
+    "can_interface.cpp",
+    "can_interface.hpp",
     "can_messages.hpp",
 ]
 

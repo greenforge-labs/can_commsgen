@@ -44,7 +44,7 @@ private:
 
 {% for msg in timeout_messages %}
     struct {{ msg.struct_name }}TimeoutState {
-        std::chrono::milliseconds timeout{{{ msg.timeout_ms }}};
+        std::chrono::milliseconds timeout{{ '{' }}{{ msg.timeout_ms }}{{ '}' }};
         std::chrono::steady_clock::time_point last_received;
         bool timed_out = false;
     };
