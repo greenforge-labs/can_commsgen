@@ -442,6 +442,54 @@ def _validate_schema(
                     entry += "  \u2190 exceeds frame at bit 64"
                 bit_pos += bits
                 lines.append(entry)
+            # Per-field inference notes for real fields
+            real_notes: list[str] = []
+            for f in msg.fields:
+                if f.type != "real":
+                    continue
+                assert f.min is not None and f.max is not None and f.resolution is not None
+                wire_min = round(f.min / f.resolution)
+                wire_max = round(f.max / f.resolution)
+                is_signed = f.min < 0
+                if is_signed:
+                    bits = _bits_for_signed(wire_min, wire_max)
+                else:
+                    bits = _bits_for_unsigned(wire_max)
+                sign_label = "signed" if is_signed else "unsigned"
+
+                real_notes.append(
+                    f"  Field '{f.name}' — type: real, "
+                    f"min: {f.min}, max: {f.max}, resolution: {f.resolution}"
+                )
+                real_notes.append(
+                    f"    Inferred wire range: [{wire_min}, {wire_max}] "
+                    f"\u2192 {bits} bits ({sign_label})"
+                )
+                real_notes.append(
+                    f"    This field uses {bits} of 64 available bits."
+                )
+
+                # Suggest coarser resolutions (×10 and ×100)
+                suggestions: list[str] = []
+                for factor in (10, 100):
+                    coarser = f.resolution * factor
+                    c_wire_min = round(f.min / coarser)
+                    c_wire_max = round(f.max / coarser)
+                    if is_signed:
+                        c_bits = _bits_for_signed(c_wire_min, c_wire_max)
+                    else:
+                        c_bits = _bits_for_unsigned(c_wire_max)
+                    if c_bits < bits:
+                        suggestions.append(f"{coarser} (\u2192 {c_bits} bits)")
+                if suggestions:
+                    real_notes.append(
+                        f"    Consider widening resolution to {' or '.join(suggestions)}."
+                    )
+
+            if real_notes:
+                lines.append("")
+                lines.extend(real_notes)
+
             lines.append("")
             lines.append("  Suggestions:")
             lines.append("    - Reduce the range (min/max) of one or more fields")

@@ -598,6 +598,34 @@ def test_frame_overflow_rich_error(tmp_path: Path) -> None:
     assert "Split this message" in error_text
 
 
+def test_frame_overflow_real_field_inference_note(tmp_path: Path) -> None:
+    """Frame overflow with real fields includes per-field inference notes."""
+    yaml_file = tmp_path / "schema.yaml"
+    # A real field with fine resolution (0.001) on a wide range uses many bits,
+    # plus a uint64 to push the total over 64.
+    yaml_file.write_text(
+        _make_schema_yaml(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: pressure\n        type: real\n"
+            "        min: -100.0\n        max: 5000.0\n        resolution: 0.001\n"
+            "      - name: big\n        type: uint64\n"
+        )
+    )
+    with pytest.raises(SchemaError, match=re.escape("exceeds CAN frame capacity")) as exc_info:
+        load_schema([yaml_file])
+
+    error_text = str(exc_info.value)
+    # Field-level inference note for the real field
+    assert "Field 'pressure'" in error_text
+    assert "type: real, min: -100.0, max: 5000.0, resolution: 0.001" in error_text
+    assert "Inferred wire range: [-100000, 5000000]" in error_text
+    assert "24 bits (signed)" in error_text
+    assert "This field uses 24 of 64 available bits." in error_text
+    # Resolution suggestions (×10 and ×100)
+    assert "0.01" in error_text
+    assert "0.1" in error_text
+
+
 # ── Enum backing type tests ────────────────────────────────────────────
 
 
