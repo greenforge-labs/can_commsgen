@@ -57,7 +57,7 @@
   - *Why*: Users should get all C++ files from a single CLI invocation.
   - *Test*: CLI smoke test in `tests/test_cli.py` — verify `can_interface.hpp` and `can_interface.cpp` exist in the output directory after running the CLI.
 
-- [ ] **9.7 Update integration tests** — Extend `tests/test_integration.py` to include the new interface files in the end-to-end snapshot comparison.
+- [x] **9.7 Update integration tests** — Extend `tests/test_integration.py` to include the new interface files in the end-to-end snapshot comparison.
   - *Why*: Full pipeline regression coverage must include all generated outputs.
   - *Test*: All integration tests pass, including new interface file comparisons.
 
