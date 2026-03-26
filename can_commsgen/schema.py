@@ -333,7 +333,7 @@ def _validate_schema(
         seen_ids[msg.id] = msg.name
 
     for msg in messages:
-        total_bits = 0
+        field_bits: list[tuple[str, int]] = []
         for f in msg.fields:
             typ = f.type
 
@@ -390,39 +390,64 @@ def _validate_schema(
                         f"exceeds {typ} bounds [{type_min}, {type_max}]"
                     )
 
-            # Accumulate bits for rule 5 check
+            # Accumulate per-field bits for rule 5 check
+            bits = 0
             if typ == "bool":
-                total_bits += 1
+                bits = 1
             elif typ in enum_names:
                 max_val = max(enums[next(
                     i for i, e in enumerate(enums) if e.name == typ
                 )].values.values())
-                total_bits += _bits_for_unsigned(max_val)
+                bits = _bits_for_unsigned(max_val)
             elif typ == "real":
                 assert f.min is not None and f.max is not None and f.resolution is not None
                 wire_min = round(f.min / f.resolution)
                 wire_max = round(f.max / f.resolution)
                 is_signed = f.min < 0
                 if is_signed:
-                    total_bits += _bits_for_signed(wire_min, wire_max)
+                    bits = _bits_for_signed(wire_min, wire_max)
                 else:
-                    total_bits += _bits_for_unsigned(wire_max)
+                    bits = _bits_for_unsigned(wire_max)
             elif typ in ENDPOINT_TYPES:
                 if f.min is not None and f.max is not None:
                     _plc, _cpp, _fw, is_signed = ENDPOINT_TYPES[typ]
                     if is_signed:
-                        total_bits += _bits_for_signed(int(f.min), int(f.max))
+                        bits = _bits_for_signed(int(f.min), int(f.max))
                     else:
-                        total_bits += _bits_for_unsigned(int(f.max))
+                        bits = _bits_for_unsigned(int(f.max))
                 else:
-                    total_bits += ENDPOINT_TYPES[typ][2]
+                    bits = ENDPOINT_TYPES[typ][2]
+            field_bits.append((f.name, bits))
 
         # Rule 5: frame > 64 bits
+        total_bits = sum(b for _, b in field_bits)
         if total_bits > 64:
-            raise SchemaError(
-                f"{msg.name}: total frame bits ({total_bits}) exceeds "
-                f"maximum of 64"
-            )
+            overflow = total_bits - 64
+            lines = [
+                f"ERROR: Message '{msg.name}' (0x{msg.id:08X}) exceeds CAN frame capacity.",
+                f"  Total packed size: {total_bits} bits ({total_bits / 8:.1f} bytes)",
+                "  CAN maximum:      64 bits (8 bytes)",
+                f"  Overflow:          {overflow} bits",
+                "",
+                "  Field breakdown:",
+            ]
+            bit_pos = 0
+            name_width = max(len(name) for name, _ in field_bits)
+            for name, bits in field_bits:
+                end_bit = bit_pos + bits - 1
+                entry = f"    {name:<{name_width}}  {bits:>2} bits  (bit {bit_pos}..{end_bit})"
+                if bit_pos < 64 <= end_bit:
+                    entry += "  \u2190 exceeds frame at bit 64"
+                elif bit_pos >= 64:
+                    entry += "  \u2190 exceeds frame at bit 64"
+                bit_pos += bits
+                lines.append(entry)
+            lines.append("")
+            lines.append("  Suggestions:")
+            lines.append("    - Reduce the range (min/max) of one or more fields")
+            lines.append("    - Increase the resolution of real-valued fields (fewer bits per field)")
+            lines.append("    - Split this message into two messages")
+            raise SchemaError("\n".join(lines))
 
 
 def load_schema(paths: list[Path]) -> Schema:

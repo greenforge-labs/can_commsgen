@@ -552,7 +552,7 @@ def _make_schema_yaml(
             "      - name: a\n        type: uint64\n"
             "      - name: b\n        type: bool\n",
             "",
-            "total frame bits (65) exceeds maximum of 64",
+            "exceeds CAN frame capacity",
             id="frame_exceeds_64_bits",
         ),
     ],
@@ -568,6 +568,34 @@ def test_validation_rules(
     yaml_file.write_text(_make_schema_yaml(messages_yaml, enums_yaml))
     with pytest.raises(SchemaError, match=re.escape(expected_error)):
         load_schema([yaml_file])
+
+
+def test_frame_overflow_rich_error(tmp_path: Path) -> None:
+    """Frame overflow error includes field breakdown, overflow marker, and suggestions."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(
+        _make_schema_yaml(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: a\n        type: uint64\n"
+            "      - name: b\n        type: bool\n"
+        )
+    )
+    with pytest.raises(SchemaError, match=re.escape("exceeds CAN frame capacity")) as exc_info:
+        load_schema([yaml_file])
+
+    error_text = str(exc_info.value)
+    # Header info
+    assert "Total packed size: 65 bits" in error_text
+    assert "Overflow:          1 bits" in error_text
+    # Field breakdown
+    assert "Field breakdown:" in error_text
+    assert "a  64 bits  (bit 0..63)" in error_text
+    assert "b   1 bits  (bit 64..64)" in error_text
+    # Overflow marker
+    assert "\u2190 exceeds frame at bit 64" in error_text
+    # Suggestions
+    assert "Reduce the range" in error_text
+    assert "Split this message" in error_text
 
 
 # ── Enum backing type tests ────────────────────────────────────────────
