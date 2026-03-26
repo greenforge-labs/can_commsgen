@@ -1,0 +1,59 @@
+// THIS FILE IS AUTO-GENERATED. DO NOT EDIT.
+#pragma once
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+#include <linux/can.h>
+#include "can_messages.hpp"
+
+namespace project_can {
+
+class CanInterface {
+public:
+    struct Handlers {
+{% for msg in plc_to_pc_messages %}
+        // {{ msg.comment }}
+        std::function<void({{ msg.struct_name }})> on_{{ msg.name }};
+{% if msg.timeout_ms is not none %}
+        std::function<void()> on_{{ msg.name }}_timeout;
+{% endif %}
+{% endfor %}
+    };
+
+    CanInterface(std::string can_device, Handlers handlers);
+    ~CanInterface();
+
+    CanInterface(const CanInterface &) = delete;
+    CanInterface &operator=(const CanInterface &) = delete;
+
+    void process_frames(size_t max_frames = 5);
+    void wait_readable();
+
+{% if pc_to_plc_messages %}
+    // pc_to_plc send overloads
+{% for msg in pc_to_plc_messages %}
+    void send(const {{ msg.struct_name }} &msg);
+{% endfor %}
+
+{% endif %}
+private:
+    std::vector<can_filter> compute_filters() const;
+    void check_timeouts(std::chrono::steady_clock::time_point now);
+
+{% for msg in timeout_messages %}
+    struct {{ msg.struct_name }}TimeoutState {
+        std::chrono::milliseconds timeout{{{ msg.timeout_ms }}};
+        std::chrono::steady_clock::time_point last_received;
+        bool timed_out = false;
+    };
+    {{ msg.struct_name }}TimeoutState {{ msg.name }}_timeout_state_;
+
+{% endfor %}
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+    Handlers handlers_;
+};
+
+} // namespace project_can
