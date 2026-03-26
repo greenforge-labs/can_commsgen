@@ -46,8 +46,10 @@ def test_cli_smoke(tmp_path: Path) -> None:
     for fname in EXPECTED_PLC_FILES:
         assert (plc_dir / fname).exists(), f"Missing PLC file: {fname}"
 
-    # C++ header exists
+    # C++ files exist
     assert (cpp_dir / "can_messages.hpp").exists()
+    assert (cpp_dir / "can_interface.hpp").exists()
+    assert (cpp_dir / "can_interface.cpp").exists()
 
     # Report exists
     assert report_path.exists()
@@ -70,6 +72,8 @@ def test_cli_no_report(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     assert (cpp_dir / "can_messages.hpp").exists()
+    assert (cpp_dir / "can_interface.hpp").exists()
+    assert (cpp_dir / "can_interface.cpp").exists()
 
 
 def test_cli_invalid_schema(tmp_path: Path) -> None:
