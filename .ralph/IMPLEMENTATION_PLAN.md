@@ -45,7 +45,7 @@
   - *Why*: Implementation file contains all SocketCAN system calls and dispatch logic.
   - *Test*: Template renders without Jinja2 errors (verified in 9.4).
 
-- [ ] **9.4 Extend `cpp.py` to generate interface files** — Add generation logic to `generate_cpp()` (or a new `generate_cpp_interface()` function called from the same entrypoint) that renders both templates and writes `can_interface.hpp` and `can_interface.cpp` to the output directory. Prepare template context with: `plc_to_pc` messages (for handlers + timeout tracking), `pc_to_plc` messages (for send overloads), struct names, message names, timeout_ms values.
+- [x] **9.4 Extend `cpp.py` to generate interface files** — Add generation logic to `generate_cpp()` (or a new `generate_cpp_interface()` function called from the same entrypoint) that renders both templates and writes `can_interface.hpp` and `can_interface.cpp` to the output directory. Prepare template context with: `plc_to_pc` messages (for handlers + timeout tracking), `pc_to_plc` messages (for send overloads), struct names, message names, timeout_ms values.
   - *Why*: Extends the existing C++ generation pipeline without changing schema or PLC modules.
   - *Test*: Snapshot test — generated files match golden files in `tests/golden/cpp/`. Add tests to `tests/test_cpp_gen.py`.
 
