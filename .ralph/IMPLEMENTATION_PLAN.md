@@ -53,7 +53,7 @@
   - *Why*: Generated C++ must be syntactically valid and type-correct.
   - *Test*: cmake build succeeds (compile-only for interface files). Existing 34 roundtrip tests still pass.
 
-- [ ] **9.6 Update CLI if needed** — Verify that `can_interface.hpp` and `can_interface.cpp` are generated automatically when `--out-cpp` is specified. If `generate_cpp()` was extended (not a separate function), no CLI changes are needed. If a separate function was added, wire it into the CLI pipeline.
+- [x] **9.6 Update CLI if needed** — Verify that `can_interface.hpp` and `can_interface.cpp` are generated automatically when `--out-cpp` is specified. If `generate_cpp()` was extended (not a separate function), no CLI changes are needed. If a separate function was added, wire it into the CLI pipeline.
   - *Why*: Users should get all C++ files from a single CLI invocation.
   - *Test*: CLI smoke test in `tests/test_cli.py` — verify `can_interface.hpp` and `can_interface.cpp` exist in the output directory after running the CLI.
 
