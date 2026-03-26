@@ -18,7 +18,7 @@
   - *Why*: Users often don't realize that `resolution: 0.001` on a wide range can consume 23+ bits for a single field.
   - *Test*: Craft a schema with a `real` field using fine resolution that causes overflow. Verify the field-level note appears within the overflow error.
 
-- [ ] **8.3 Improve range vs endpoint type mismatch error (Rule 4)** — Reformat the error to show: field name + message context, declared type + min/max, which bound is exceeded and by how much, actionable suggestion (widen type or reduce range).
+- [x] **8.3 Improve range vs endpoint type mismatch error (Rule 4)** — Reformat the error to show: field name + message context, declared type + min/max, which bound is exceeded and by how much, actionable suggestion (widen type or reduce range).
   - *Why*: Current format `"motor_command.target_velocity: range [-100, 1024] exceeds uint8 bounds [0, 255]"` requires the user to figure out the fix themselves.
   - *Test*: Update existing range mismatch tests in `tests/test_schema.py` to match new multi-line format.
 
