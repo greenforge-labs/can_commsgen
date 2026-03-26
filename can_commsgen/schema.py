@@ -309,6 +309,23 @@ def _process_enums(enums: list[EnumDef]) -> None:
         enum.backing_type_cpp = cpp_bt
 
 
+# ── Validation helpers ───────────────────────────────────────────────────────
+
+_WIDER_TYPE: dict[str, str] = {
+    "uint8": "uint16",
+    "uint16": "uint32",
+    "uint32": "uint64",
+    "int8": "int16",
+    "int16": "int32",
+    "int32": "int64",
+}
+
+
+def _next_wider_type(typ: str) -> str | None:
+    """Return the next wider integer type, or None if already the widest."""
+    return _WIDER_TYPE.get(typ)
+
+
 # ── Validation ──────────────────────────────────────────────────────────────
 
 
@@ -385,10 +402,35 @@ def _validate_schema(
             if typ in INTEGER_RANGES and f.min is not None and f.max is not None:
                 type_min, type_max = INTEGER_RANGES[typ]
                 if f.min < type_min or f.max > type_max:
-                    raise SchemaError(
-                        f"{msg.name}.{f.name}: range [{f.min}, {f.max}] "
-                        f"exceeds {typ} bounds [{type_min}, {type_max}]"
-                    )
+                    lines = [
+                        f"ERROR: Field '{f.name}' in message '{msg.name}' (0x{msg.id:08X}):",
+                        f"  type: {typ}, min: {f.min}, max: {f.max}",
+                    ]
+                    # Identify which bound(s) exceeded
+                    if f.max > type_max:
+                        lines.append(
+                            f"  max value {f.max} exceeds {typ} range [{type_min}, {type_max}]."
+                        )
+                    if f.min < type_min:
+                        lines.append(
+                            f"  min value {f.min} exceeds {typ} range [{type_min}, {type_max}]."
+                        )
+                    lines.append("")
+                    # Suggest next wider type or range reduction
+                    wider = _next_wider_type(typ)
+                    if wider and f.max > type_max:
+                        lines.append(
+                            f"  Either widen the type to {wider}, or reduce max to {type_max}."
+                        )
+                    elif wider and f.min < type_min:
+                        lines.append(
+                            f"  Either widen the type to {wider}, or increase min to {type_min}."
+                        )
+                    elif f.max > type_max:
+                        lines.append(f"  Reduce max to {type_max}.")
+                    else:
+                        lines.append(f"  Increase min to {type_min}.")
+                    raise SchemaError("\n".join(lines))
 
             # Accumulate per-field bits for rule 5 check
             bits = 0

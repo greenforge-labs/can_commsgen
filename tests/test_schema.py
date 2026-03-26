@@ -521,7 +521,7 @@ def _make_schema_yaml(
             "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
             "      - name: x\n        type: uint8\n        min: 0\n        max: 300\n",
             "",
-            "exceeds uint8 bounds",
+            "exceeds uint8 range",
             id="integer_range_outside_type",
         ),
         pytest.param(
@@ -596,6 +596,46 @@ def test_frame_overflow_rich_error(tmp_path: Path) -> None:
     # Suggestions
     assert "Reduce the range" in error_text
     assert "Split this message" in error_text
+
+
+def test_range_mismatch_rich_error(tmp_path: Path) -> None:
+    """Range vs endpoint type mismatch error includes field context, bounds, and suggestion."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(
+        _make_schema_yaml(
+            "  - name: heartbeat\n    id: 0x500\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: counter\n        type: uint8\n        min: 0\n        max: 1024\n"
+        )
+    )
+    with pytest.raises(SchemaError, match=re.escape("exceeds uint8 range")) as exc_info:
+        load_schema([yaml_file])
+
+    error_text = str(exc_info.value)
+    # Header with field and message context
+    assert "Field 'counter' in message 'heartbeat' (0x00000500)" in error_text
+    # Declared type and range
+    assert "type: uint8, min: 0, max: 1024" in error_text
+    # Which bound exceeded
+    assert "max value 1024 exceeds uint8 range [0, 255]" in error_text
+    # Actionable suggestion
+    assert "Either widen the type to uint16, or reduce max to 255" in error_text
+
+
+def test_range_mismatch_min_below_type(tmp_path: Path) -> None:
+    """Range mismatch when min is below the type's minimum."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(
+        _make_schema_yaml(
+            "  - name: m\n    id: 0x100\n    direction: pc_to_plc\n    fields:\n"
+            "      - name: val\n        type: int8\n        min: -200\n        max: 100\n"
+        )
+    )
+    with pytest.raises(SchemaError, match=re.escape("exceeds int8 range")) as exc_info:
+        load_schema([yaml_file])
+
+    error_text = str(exc_info.value)
+    assert "min value -200 exceeds int8 range [-128, 127]" in error_text
+    assert "Either widen the type to int16" in error_text
 
 
 def test_frame_overflow_real_field_inference_note(tmp_path: Path) -> None:
