@@ -238,11 +238,12 @@ def test_cpp_roundtrip_via_cli(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0, f"CLI failed:\n{result.output}"
 
-    # Copy generated header into the roundtrip test's expected location
+    # Copy generated C++ files into the roundtrip test's expected location
     roundtrip_dir = Path(__file__).parent / "cpp_roundtrip"
     generated_dir = roundtrip_dir / "generated"
     generated_dir.mkdir(exist_ok=True)
-    shutil.copy2(cpp_dir / "can_messages.hpp", generated_dir / "can_messages.hpp")
+    for fname in ("can_messages.hpp", "can_interface.hpp", "can_interface.cpp"):
+        shutil.copy2(cpp_dir / fname, generated_dir / fname)
 
     # Build with cmake
     build_dir = tmp_path / "build"

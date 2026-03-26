@@ -65,10 +65,14 @@ def test_cpp_roundtrip(
     """Generate can_messages.hpp, compile, and run C++ roundtrip tests."""
     schema = load_schema([example_schema_path])
 
-    # Generate header into the roundtrip test's expected location
+    # Generate all C++ files into the roundtrip test's expected location
     generated_dir = CPP_ROUNDTRIP_DIR / "generated"
     generated_dir.mkdir(exist_ok=True)
     generate_cpp(schema, generated_dir)
+
+    # Verify interface files are present (compiled as part of cmake build)
+    assert (generated_dir / "can_interface.hpp").exists()
+    assert (generated_dir / "can_interface.cpp").exists()
 
     # Build with cmake in a temporary build directory
     build_dir = tmp_path / "build"

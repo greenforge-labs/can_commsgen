@@ -17,5 +17,14 @@ target_include_directories(test_roundtrip PRIVATE
     ${GENERATED_DIR}
 )
 
+# Compile-only target for can_interface.cpp.
+# Uses stub system headers (poll.h, sys/socket.h, etc.) from this directory.
+# Not linked into a runnable executable — just verifies the generated code compiles.
+add_library(can_interface OBJECT ${GENERATED_DIR}/can_interface.cpp)
+target_include_directories(can_interface PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${GENERATED_DIR}
+)
+
 enable_testing()
 add_test(NAME roundtrip COMMAND test_roundtrip)
