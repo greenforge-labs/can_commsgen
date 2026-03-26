@@ -14,7 +14,7 @@
   - *Why*: The current error `"motor_command: total frame bits (68) exceeds maximum of 64"` gives no visibility into which fields contribute or how to fix it.
   - *Test*: Update existing frame overflow test in `tests/test_schema.py` to match new multi-line format. Verify field breakdown and overflow marker are present.
 
-- [ ] **8.2 Add field-level inference warning within frame overflow** — When a message overflows AND contains a `real` field using a large portion of the 64-bit budget (from fine resolution), append a per-field note showing the inferred wire range, bit count, and suggestions to widen resolution.
+- [x] **8.2 Add field-level inference warning within frame overflow** — When a message overflows AND contains a `real` field using a large portion of the 64-bit budget (from fine resolution), append a per-field note showing the inferred wire range, bit count, and suggestions to widen resolution.
   - *Why*: Users often don't realize that `resolution: 0.001` on a wide range can consume 23+ bits for a single field.
   - *Test*: Craft a schema with a `real` field using fine resolution that causes overflow. Verify the field-level note appears within the overflow error.
 
