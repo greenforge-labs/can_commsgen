@@ -37,7 +37,7 @@
   - *Details*: For `example_schema.yaml`, the Handlers struct has: `on_drive_status` (data, `plc_to_pc`), no timeout handler for drive_status (no `timeout_ms`). Send overloads for `MotorCommand` and `PcState` (`pc_to_plc`). Timeout tracking: none for the example schema (no `plc_to_pc` messages have `timeout_ms`).
   - *Test*: Files exist and are well-formed C++ (compile check deferred to 9.5).
 
-- [ ] **9.2 Create `can_interface.hpp.j2` template** — Jinja2 template in `can_commsgen/templates/cpp/` producing the header with: pragma once, auto-generated comment, includes, namespace `project_can`, `CanInterface` class declaration with `Handlers` struct (data + timeout handlers for `plc_to_pc` messages), constructor/destructor, `process_frames()`, `wait_readable()`, `send()` overloads for `pc_to_plc` messages, private `compute_filters()`, `check_timeouts()`, `MessageTimeoutState`, pimpl `Impl`.
+- [x] **9.2 Create `can_interface.hpp.j2` template** — Jinja2 template in `can_commsgen/templates/cpp/` producing the header with: pragma once, auto-generated comment, includes, namespace `project_can`, `CanInterface` class declaration with `Handlers` struct (data + timeout handlers for `plc_to_pc` messages), constructor/destructor, `process_frames()`, `wait_readable()`, `send()` overloads for `pc_to_plc` messages, private `compute_filters()`, `check_timeouts()`, `MessageTimeoutState`, pimpl `Impl`.
   - *Why*: Template-driven generation keeps the output consistent with schema changes.
   - *Test*: Template renders without Jinja2 errors (verified in 9.4).
 
