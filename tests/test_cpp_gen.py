@@ -9,7 +9,7 @@ import pytest
 from can_commsgen.cpp import generate_cpp
 from can_commsgen.schema import load_schema
 
-CPP_ROUNDTRIP_DIR = Path(__file__).parent / "cpp_roundtrip"
+CPP_TESTS_DIR = Path(__file__).parent / "cpp_tests"
 
 
 def test_can_messages_hpp_generation(
@@ -66,7 +66,7 @@ def test_cpp_roundtrip(
     schema = load_schema([example_schema_path])
 
     # Generate all C++ files into the roundtrip test's expected location
-    generated_dir = CPP_ROUNDTRIP_DIR / "generated"
+    generated_dir = CPP_TESTS_DIR / "generated"
     generated_dir.mkdir(exist_ok=True)
     generate_cpp(schema, generated_dir)
 
@@ -79,7 +79,7 @@ def test_cpp_roundtrip(
     build_dir.mkdir()
 
     cmake_result = subprocess.run(
-        ["cmake", str(CPP_ROUNDTRIP_DIR)],
+        ["cmake", str(CPP_TESTS_DIR)],
         cwd=build_dir,
         capture_output=True,
         text=True,

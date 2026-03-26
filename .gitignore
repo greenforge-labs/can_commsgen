@@ -211,5 +211,5 @@ flake.nix
 flake.lock
 .direnv/
 
-# C++ roundtrip test generated output
-tests/cpp_roundtrip/generated/
+# C++ test generated output
+tests/cpp_tests/generated/
