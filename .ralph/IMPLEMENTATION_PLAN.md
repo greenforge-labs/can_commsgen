@@ -32,7 +32,7 @@
 
 > **Goal**: Generate `can_interface.hpp` and `can_interface.cpp` alongside the existing `can_messages.hpp`, providing a ready-made SocketCAN wrapper with typed dispatch, send helpers, and edge-triggered timeout tracking.
 
-- [ ] **9.1 Create golden files** — Write `tests/golden/cpp/can_interface.hpp` and `tests/golden/cpp/can_interface.cpp` by hand based on the spec and `example_schema.yaml`. These define the exact expected output for snapshot tests.
+- [x] **9.1 Create golden files** — Write `tests/golden/cpp/can_interface.hpp` and `tests/golden/cpp/can_interface.cpp` by hand based on the spec and `example_schema.yaml`. These define the exact expected output for snapshot tests.
   - *Why*: Golden files must exist before the generator so we have a target to test against.
   - *Details*: For `example_schema.yaml`, the Handlers struct has: `on_drive_status` (data, `plc_to_pc`), no timeout handler for drive_status (no `timeout_ms`). Send overloads for `MotorCommand` and `PcState` (`pc_to_plc`). Timeout tracking: none for the example schema (no `plc_to_pc` messages have `timeout_ms`).
   - *Test*: Files exist and are well-formed C++ (compile check deferred to 9.5).
