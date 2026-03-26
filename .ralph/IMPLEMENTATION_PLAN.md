@@ -49,7 +49,7 @@
   - *Why*: Extends the existing C++ generation pipeline without changing schema or PLC modules.
   - *Test*: Snapshot test — generated files match golden files in `tests/golden/cpp/`. Add tests to `tests/test_cpp_gen.py`.
 
-- [ ] **9.5 Verify generated code compiles** — Extend the C++ roundtrip build in `tests/cpp_roundtrip/` to include the generated interface files. Since SocketCAN APIs won't be available in CI, use compile-only checks (or stub the system headers). Update `CMakeLists.txt` to add the interface files as a separate compilation unit or compile-only target.
+- [x] **9.5 Verify generated code compiles** — Extend the C++ roundtrip build in `tests/cpp_roundtrip/` to include the generated interface files. Since SocketCAN APIs won't be available in CI, use compile-only checks (or stub the system headers). Update `CMakeLists.txt` to add the interface files as a separate compilation unit or compile-only target.
   - *Why*: Generated C++ must be syntactically valid and type-correct.
   - *Test*: cmake build succeeds (compile-only for interface files). Existing 34 roundtrip tests still pass.
 
