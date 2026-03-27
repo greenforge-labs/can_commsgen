@@ -301,10 +301,10 @@ pixi run pytest tests/                      # Tests (Python + C++ roundtrip)
 | `test_cli.py` | CLI smoke tests and error handling |
 | `test_integration.py` | End-to-end generation and multi-schema merge |
 
-A **C++ roundtrip test** in `tests/cpp_roundtrip/` compiles the generated header and runs 34 parse/build roundtrip tests to verify bitpacking correctness:
+A **C++ roundtrip test** in `tests/cpp_tests/` compiles the generated header and runs 34 parse/build roundtrip tests to verify bitpacking correctness:
 
 ```bash
-cd tests/cpp_roundtrip
+cd tests/cpp_tests
 cmake -B build && cmake --build build && ctest --output-on-failure
 ```
 
@@ -324,7 +324,7 @@ can_commsgen/
 ├── tests/
 │   ├── fixtures/           # Example YAML schemas
 │   ├── golden/             # Expected outputs for snapshot tests
-│   └── cpp_roundtrip/      # C++ compilation + roundtrip tests
+│   └── cpp_tests/          # C++ compilation + roundtrip tests
 ├── schema.json             # JSON Schema for YAML validation
 ├── pyproject.toml
 └── design.md               # Authoritative design document

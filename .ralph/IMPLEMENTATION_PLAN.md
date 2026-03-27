@@ -137,7 +137,7 @@
 
 ### 10.6 — Clean up stale `tests/cpp_roundtrip/` directory
 
-- [ ] **10.6.1 Remove or .gitignore `tests/cpp_roundtrip/`** — This directory is untracked (`?? tests/cpp_roundtrip/` in git status) and appears to be a leftover from before `tests/cpp_tests/` was created. No test code references it. Verify nothing references it, then delete or add to `.gitignore`.
+- [x] **10.6.1 Remove or .gitignore `tests/cpp_roundtrip/`** — This directory is untracked (`?? tests/cpp_roundtrip/` in git status) and appears to be a leftover from before `tests/cpp_tests/` was created. No test code references it. Verify nothing references it, then delete or add to `.gitignore`.
   - *Why*: Prevents confusion about which C++ test directory is authoritative.
   - *Test*: `pixi run pytest tests/` still all green after removal.
 

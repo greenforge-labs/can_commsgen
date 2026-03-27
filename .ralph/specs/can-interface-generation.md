@@ -68,4 +68,4 @@ A new Jinja2 template (or pair of templates) in `templates/cpp/` defines the out
 ## Testing
 - Snapshot test: generate from `tests/fixtures/example_schema.yaml`, compare against new golden files in `tests/golden/cpp/can_interface.hpp` and `tests/golden/cpp/can_interface.cpp`
 - Test in `tests/test_cpp_gen.py` alongside existing C++ generation tests
-- The generated code must compile (verified by extending the existing C++ roundtrip build in `tests/cpp_roundtrip/` to include the new files, though linking against SocketCAN APIs will require stubs or compile-only checks on CI)
+- The generated code must compile (verified by extending the existing C++ roundtrip build in `tests/cpp_tests/` to include the new files, though linking against SocketCAN APIs will require stubs or compile-only checks on CI)
