@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <stdexcept>
+#include <utility>
 
 static int tests_run = 0;
 static int tests_passed = 0;
@@ -113,6 +114,24 @@ void test_construction_bind_failure() {
         threw = true;
     }
     ASSERT_TRUE(threw, "bind failure throws runtime_error");
+}
+
+void test_construction_setsockopt_failure() {
+    std::printf("test_construction_setsockopt_failure\n");
+    stub().reset();
+    stub().setsockopt_fail = true;
+
+    // Need a handler set so that filters are non-empty and setsockopt is called
+    CanInterface::Handlers h{};
+    h.on_drive_status = [](DriveStatus) {};
+
+    bool threw = false;
+    try {
+        CanInterface("vcan0", h);
+    } catch (const std::runtime_error &) {
+        threw = true;
+    }
+    ASSERT_TRUE(threw, "setsockopt failure throws runtime_error");
 }
 
 // ---------------------------------------------------------------------------
@@ -260,6 +279,91 @@ void test_process_frames_no_handler_set() {
     PASS("no crash with unset handler");
 }
 
+void test_process_frames_eintr_retries() {
+    std::printf("test_process_frames_eintr_retries\n");
+    stub().reset();
+
+    int call_count = 0;
+    CanInterface::Handlers h{};
+    h.on_drive_status = [&](DriveStatus) { ++call_count; };
+
+    auto iface = CanInterface("vcan0", h);
+
+    // Enqueue 2 frames, but inject EINTR before the first
+    DriveStatus tx{0.0, 0.0, 0.0, 0};
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    stub().read_errno_at = 0;
+    stub().read_errno_val = EINTR;
+
+    iface.process_frames(/*max_frames=*/5);
+
+    ASSERT_EQ(call_count, 2, "both frames processed despite EINTR");
+}
+
+void test_process_frames_real_error_throws() {
+    std::printf("test_process_frames_real_error_throws\n");
+    stub().reset();
+
+    CanInterface::Handlers h{};
+    h.on_drive_status = [](DriveStatus) {};
+
+    auto iface = CanInterface("vcan0", h);
+
+    // Inject EIO (a real error, not EAGAIN/EINTR)
+    DriveStatus tx{0.0, 0.0, 0.0, 0};
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    stub().read_errno_at = 0;
+    stub().read_errno_val = 5;  // EIO
+
+    bool threw = false;
+    try {
+        iface.process_frames();
+    } catch (const std::runtime_error &) {
+        threw = true;
+    }
+    ASSERT_TRUE(threw, "real read error throws runtime_error");
+}
+
+void test_process_frames_incomplete_frame_throws() {
+    std::printf("test_process_frames_incomplete_frame_throws\n");
+    stub().reset();
+
+    auto iface = CanInterface("vcan0", empty_handlers());
+
+    DriveStatus tx{0.0, 0.0, 0.0, 0};
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    stub().read_short = true;
+
+    bool threw = false;
+    try {
+        iface.process_frames();
+    } catch (const std::runtime_error &) {
+        threw = true;
+    }
+    ASSERT_TRUE(threw, "incomplete frame throws runtime_error");
+}
+
+void test_send_failure_throws() {
+    std::printf("test_send_failure_throws\n");
+    stub().reset();
+
+    auto iface = CanInterface("vcan0", empty_handlers());
+    stub().write_fail = true;
+
+    bool threw = false;
+    try {
+        MotorCommand cmd{};
+        iface.send(cmd);
+    } catch (const std::runtime_error &) {
+        threw = true;
+    }
+    ASSERT_TRUE(threw, "send failure throws runtime_error");
+}
+
 // ---------------------------------------------------------------------------
 // Filter installation
 // ---------------------------------------------------------------------------
@@ -287,6 +391,55 @@ void test_no_filters_without_handlers() {
 }
 
 // ---------------------------------------------------------------------------
+// Move semantics
+// ---------------------------------------------------------------------------
+void test_move_constructor() {
+    std::printf("test_move_constructor\n");
+    stub().reset();
+
+    int call_count = 0;
+    CanInterface::Handlers h{};
+    h.on_drive_status = [&](DriveStatus) { ++call_count; };
+
+    auto original = CanInterface("vcan0", h);
+    auto moved = std::move(original);
+
+    // moved instance should work — send and receive
+    DriveStatus tx{0.0, 0.0, 0.0, 0};
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    moved.process_frames();
+
+    ASSERT_EQ(call_count, 1, "moved instance dispatches frames");
+}
+
+void test_move_assignment() {
+    std::printf("test_move_assignment\n");
+    stub().reset();
+
+    auto first = CanInterface("vcan0", empty_handlers());
+    stub().closed_fds.clear();
+
+    int call_count = 0;
+    CanInterface::Handlers h{};
+    h.on_drive_status = [&](DriveStatus) { ++call_count; };
+
+    auto second = CanInterface("vcan0", h);
+
+    // Move-assign second into first — first's old fd should be closed
+    first = std::move(second);
+
+    ASSERT_EQ(stub().closed_fds.size(), 1, "old fd closed on move-assign");
+
+    DriveStatus tx{0.0, 0.0, 0.0, 0};
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    first.process_frames();
+
+    ASSERT_EQ(call_count, 1, "move-assigned instance dispatches frames");
+}
+
+// ---------------------------------------------------------------------------
 // Destructor
 // ---------------------------------------------------------------------------
 void test_destructor_closes_socket() {
@@ -307,17 +460,25 @@ int main() {
     test_construction_socket_failure();
     test_construction_ioctl_failure();
     test_construction_bind_failure();
+    test_construction_setsockopt_failure();
 
     test_send_motor_command();
     test_send_pc_state();
+    test_send_failure_throws();
 
     test_process_frames_dispatches_drive_status();
     test_process_frames_ignores_unknown_id();
     test_process_frames_respects_max_frames();
     test_process_frames_no_handler_set();
+    test_process_frames_eintr_retries();
+    test_process_frames_real_error_throws();
+    test_process_frames_incomplete_frame_throws();
 
     test_filters_installed_with_handler();
     test_no_filters_without_handlers();
+
+    test_move_constructor();
+    test_move_assignment();
 
     test_destructor_closes_socket();
 

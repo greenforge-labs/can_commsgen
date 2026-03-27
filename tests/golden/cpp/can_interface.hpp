@@ -2,7 +2,6 @@
 #pragma once
 #include <chrono>
 #include <functional>
-#include <memory>
 #include <string>
 #include <vector>
 #include <linux/can.h>
@@ -23,6 +22,9 @@ public:
     CanInterface(const CanInterface &) = delete;
     CanInterface &operator=(const CanInterface &) = delete;
 
+    CanInterface(CanInterface &&other) noexcept;
+    CanInterface &operator=(CanInterface &&other) noexcept;
+
     void process_frames(size_t max_frames = 5);
     void wait_readable();
 
@@ -34,8 +36,7 @@ private:
     std::vector<can_filter> compute_filters() const;
     void check_timeouts(std::chrono::steady_clock::time_point now);
 
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+    int socket_fd_ = -1;
     Handlers handlers_;
 };
 

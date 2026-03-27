@@ -20,6 +20,7 @@ inline int bind(int /*fd*/, const struct sockaddr * /*addr*/, unsigned int /*len
 
 inline int setsockopt(int /*fd*/, int /*level*/, int /*optname*/,
                       const void *optval, unsigned int optlen) {
+    if (stub().setsockopt_fail) return -1;
     if (optval && optlen > 0) {
         size_t count = optlen / sizeof(can_filter);
         auto *filters = static_cast<const can_filter *>(optval);
