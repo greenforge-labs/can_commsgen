@@ -94,7 +94,7 @@ packages:
 - pypi: ./
   name: can-commsgen
   version: 0.1.0
-  sha256: a08ad33d1951dd9596bc57f642aaa045390f59eb4422ee451155bd1fbdddfee5
+  sha256: 0046b592659f48fa7808d13a9575ecbc6eccb8658f886d34b370752eaea2295c
   requires_dist:
   - pyyaml
   - jinja2

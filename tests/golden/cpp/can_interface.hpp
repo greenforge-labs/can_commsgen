@@ -1,16 +1,16 @@
 // THIS FILE IS AUTO-GENERATED. DO NOT EDIT.
 #pragma once
+#include "can_messages.hpp"
 #include <chrono>
 #include <functional>
+#include <linux/can.h>
 #include <string>
 #include <vector>
-#include <linux/can.h>
-#include "can_messages.hpp"
 
 namespace project_can {
 
 class CanInterface {
-public:
+  public:
     struct Handlers {
         // drive_status (0x00000200, plc_to_pc)
         std::function<void(DriveStatus)> on_drive_status;
@@ -32,7 +32,7 @@ public:
     void send(const MotorCommand &msg);
     void send(const PcState &msg);
 
-private:
+  private:
     std::vector<can_filter> compute_filters() const;
     void check_timeouts(std::chrono::steady_clock::time_point now);
 

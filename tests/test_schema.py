@@ -1,5 +1,5 @@
-import re
 from pathlib import Path
+import re
 
 import jsonschema
 import pytest
@@ -47,12 +47,22 @@ def test_example_schema_validates(example_schema_raw: dict, json_schema: dict) -
     "snippet, expected_error",
     [
         pytest.param(
-            {"plc": {"can_channel": "CHAN_0"}, "messages": [{"name": "m", "id": 1, "direction": "pc_to_plc", "fields": [{"name": "f", "type": "bool"}]}]},
+            {
+                "plc": {"can_channel": "CHAN_0"},
+                "messages": [
+                    {"name": "m", "id": 1, "direction": "pc_to_plc", "fields": [{"name": "f", "type": "bool"}]}
+                ],
+            },
             "'version' is a required property",
             id="missing_version",
         ),
         pytest.param(
-            {"version": "1", "messages": [{"name": "m", "id": 1, "direction": "pc_to_plc", "fields": [{"name": "f", "type": "bool"}]}]},
+            {
+                "version": "1",
+                "messages": [
+                    {"name": "m", "id": 1, "direction": "pc_to_plc", "fields": [{"name": "f", "type": "bool"}]}
+                ],
+            },
             "'plc' is a required property",
             id="missing_plc",
         ),
@@ -62,22 +72,49 @@ def test_example_schema_validates(example_schema_raw: dict, json_schema: dict) -
             id="missing_messages",
         ),
         pytest.param(
-            {"version": "2", "plc": {"can_channel": "CHAN_0"}, "messages": [{"name": "m", "id": 1, "direction": "pc_to_plc", "fields": [{"name": "f", "type": "bool"}]}]},
+            {
+                "version": "2",
+                "plc": {"can_channel": "CHAN_0"},
+                "messages": [
+                    {"name": "m", "id": 1, "direction": "pc_to_plc", "fields": [{"name": "f", "type": "bool"}]}
+                ],
+            },
             "'2' is not one of ['1']",
             id="bad_version",
         ),
         pytest.param(
-            {"version": "1", "plc": {"can_channel": "CHAN_0"}, "messages": [{"name": "m", "id": 1, "direction": "sideways", "fields": [{"name": "f", "type": "bool"}]}]},
+            {
+                "version": "1",
+                "plc": {"can_channel": "CHAN_0"},
+                "messages": [
+                    {"name": "m", "id": 1, "direction": "sideways", "fields": [{"name": "f", "type": "bool"}]}
+                ],
+            },
             "'sideways' is not one of",
             id="bad_direction",
         ),
         pytest.param(
-            {"version": "1", "plc": {"can_channel": "CHAN_0"}, "messages": [{"name": "m", "id": 1, "direction": "pc_to_plc", "fields": [{"name": "f", "type": "bool", "extra": 1}]}]},
+            {
+                "version": "1",
+                "plc": {"can_channel": "CHAN_0"},
+                "messages": [
+                    {
+                        "name": "m",
+                        "id": 1,
+                        "direction": "pc_to_plc",
+                        "fields": [{"name": "f", "type": "bool", "extra": 1}],
+                    }
+                ],
+            },
             "Additional properties are not allowed",
             id="extra_field_property",
         ),
         pytest.param(
-            {"version": "1", "plc": {"can_channel": "CHAN_0"}, "messages": [{"name": "m", "id": 1, "direction": "pc_to_plc", "fields": []}]},
+            {
+                "version": "1",
+                "plc": {"can_channel": "CHAN_0"},
+                "messages": [{"name": "m", "id": 1, "direction": "pc_to_plc", "fields": []}],
+            },
             "[] should be non-empty",
             id="empty_fields",
         ),
@@ -174,7 +211,9 @@ def test_load_schema_enum_field(example_schema_path: Path) -> None:
 def test_load_invalid_yaml_raises(tmp_path: Path) -> None:
     """Loading a structurally invalid YAML raises SchemaError."""
     bad = tmp_path / "bad.yaml"
-    bad.write_text('version: "2"\nplc:\n  can_channel: CHAN_0\nmessages:\n  - name: m\n    id: 1\n    direction: pc_to_plc\n    fields:\n      - name: f\n        type: bool\n')
+    bad.write_text(
+        'version: "2"\nplc:\n  can_channel: CHAN_0\nmessages:\n  - name: m\n    id: 1\n    direction: pc_to_plc\n    fields:\n      - name: f\n        type: bool\n'
+    )
     with pytest.raises(SchemaError, match="'2' is not one of"):
         load_schema([bad])
 
@@ -246,27 +285,57 @@ def _find_field(schema: Schema, msg_name: str, field_name: str) -> FieldDef:
     "msg_name, field_name, expected_bits, expected_signed, expected_wire_min, expected_wire_max",
     [
         pytest.param(
-            "motor_command", "target_velocity", 16, True, -32000, 32000,
+            "motor_command",
+            "target_velocity",
+            16,
+            True,
+            -32000,
+            32000,
             id="real_signed_target_velocity",
         ),
         pytest.param(
-            "motor_command", "torque_limit", 16, False, 0, 65535,
+            "motor_command",
+            "torque_limit",
+            16,
+            False,
+            0,
+            65535,
             id="real_unsigned_torque_limit",
         ),
         pytest.param(
-            "drive_status", "motor_temp", 12, True, -400, 2000,
+            "drive_status",
+            "motor_temp",
+            12,
+            True,
+            -400,
+            2000,
             id="real_signed_motor_temp",
         ),
         pytest.param(
-            "drive_status", "bus_voltage", 10, False, 0, 1023,
+            "drive_status",
+            "bus_voltage",
+            10,
+            False,
+            0,
+            1023,
             id="real_unsigned_bus_voltage",
         ),
         pytest.param(
-            "drive_status", "fault_code", 8, False, 0, 255,
+            "drive_status",
+            "fault_code",
+            8,
+            False,
+            0,
+            255,
             id="integer_bare_fault_code",
         ),
         pytest.param(
-            "pc_state", "drive_mode", 2, False, 0, 3,
+            "pc_state",
+            "drive_mode",
+            2,
+            False,
+            0,
+            3,
             id="enum_drive_mode",
         ),
     ],
@@ -414,9 +483,7 @@ def test_struct_name(message_name: str, expected: str) -> None:
         pytest.param("pc_state", 1, id="pc_state_dlc"),
     ],
 )
-def test_dlc_computation(
-    example_schema_path: Path, msg_name: str, expected_dlc: int
-) -> None:
+def test_dlc_computation(example_schema_path: Path, msg_name: str, expected_dlc: int) -> None:
     """DLC = ceil(total_bits / 8) for each message."""
     schema = load_schema([example_schema_path])
     msg = next(m for m in schema.messages if m.name == msg_name)
@@ -435,9 +502,7 @@ def test_dlc_computation(
         pytest.param("pc_state", "drive_mode", 0, id="ps_drive_mode"),
     ],
 )
-def test_bit_offsets(
-    example_schema_path: Path, msg_name: str, field_name: str, expected_offset: int
-) -> None:
+def test_bit_offsets(example_schema_path: Path, msg_name: str, field_name: str, expected_offset: int) -> None:
     """Fields are assigned sequential bit offsets."""
     schema = load_schema([example_schema_path])
     f = _find_field(schema, msg_name, field_name)
@@ -682,9 +747,7 @@ def test_frame_overflow_real_field_inference_note(tmp_path: Path) -> None:
         pytest.param(2**32, "ULINT", "uint64_t", id="uint32_overflow"),
     ],
 )
-def test_enum_backing_type(
-    max_value: int, expected_plc: str, expected_cpp: str
-) -> None:
+def test_enum_backing_type(max_value: int, expected_plc: str, expected_cpp: str) -> None:
     """enum_backing_type selects the smallest integer type fitting max_value."""
     plc, cpp = enum_backing_type(max_value)
     assert plc == expected_plc

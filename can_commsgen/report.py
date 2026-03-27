@@ -94,9 +94,7 @@ def _compute_data_widths(rows: list[list[str]]) -> list[int]:
     return widths
 
 
-def _compute_header_widths(
-    data_widths: list[int], rows: list[list[str]]
-) -> list[int]:
+def _compute_header_widths(data_widths: list[int], rows: list[list[str]]) -> list[int]:
     """Compute column widths for the header row.
 
     Field is 1 narrower than data (20 vs 21). The first header-dominated

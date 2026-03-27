@@ -2,53 +2,53 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import json
 import math
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import jsonschema
 import yaml
 
-
 # ── Type mappings ────────────────────────────────────────────────────────────
 
 # Endpoint type name → (PLC type, C++ type, bit width, is_signed)
 ENDPOINT_TYPES: dict[str, tuple[str, str, int, bool]] = {
-    "bool":   ("BOOL",   "bool",     1,  False),
-    "uint8":  ("USINT",  "uint8_t",  8,  False),
-    "int8":   ("SINT",   "int8_t",   8,  True),
-    "uint16": ("UINT",   "uint16_t", 16, False),
-    "int16":  ("INT",    "int16_t",  16, True),
-    "uint32": ("UDINT",  "uint32_t", 32, False),
-    "int32":  ("DINT",   "int32_t",  32, True),
-    "uint64": ("ULINT",  "uint64_t", 64, False),
-    "int64":  ("LINT",   "int64_t",  64, True),
-    "real":   ("REAL",   "double",   0,  False),  # bit width derived from range
+    "bool": ("BOOL", "bool", 1, False),
+    "uint8": ("USINT", "uint8_t", 8, False),
+    "int8": ("SINT", "int8_t", 8, True),
+    "uint16": ("UINT", "uint16_t", 16, False),
+    "int16": ("INT", "int16_t", 16, True),
+    "uint32": ("UDINT", "uint32_t", 32, False),
+    "int32": ("DINT", "int32_t", 32, True),
+    "uint64": ("ULINT", "uint64_t", 64, False),
+    "int64": ("LINT", "int64_t", 64, True),
+    "real": ("REAL", "double", 0, False),  # bit width derived from range
 }
 
 # Integer endpoint type ranges (min, max) for validation.
 INTEGER_RANGES: dict[str, tuple[int, int]] = {
-    "uint8":  (0, 255),
-    "int8":   (-128, 127),
+    "uint8": (0, 255),
+    "int8": (-128, 127),
     "uint16": (0, 65535),
-    "int16":  (-32768, 32767),
+    "int16": (-32768, 32767),
     "uint32": (0, 2**32 - 1),
-    "int32":  (-(2**31), 2**31 - 1),
+    "int32": (-(2**31), 2**31 - 1),
     "uint64": (0, 2**64 - 1),
-    "int64":  (-(2**63), 2**63 - 1),
+    "int64": (-(2**63), 2**63 - 1),
 }
 
 # Backing type selection: max_value → (PLC type, C++ type)
 BACKING_TYPES: list[tuple[int, str, str]] = [
-    (255,        "USINT",  "uint8_t"),
-    (65535,      "UINT",   "uint16_t"),
-    (2**32 - 1,  "UDINT",  "uint32_t"),
-    (2**64 - 1,  "ULINT",  "uint64_t"),
+    (255, "USINT", "uint8_t"),
+    (65535, "UINT", "uint16_t"),
+    (2**32 - 1, "UDINT", "uint32_t"),
+    (2**64 - 1, "ULINT", "uint64_t"),
 ]
 
 
 # ── Naming helpers ───────────────────────────────────────────────────────────
+
 
 def _snake_to_camel(name: str) -> str:
     """Convert snake_case to camelCase."""
@@ -96,6 +96,7 @@ def enum_backing_type(max_value: int) -> tuple[str, str]:
 
 
 # ── Dataclasses ──────────────────────────────────────────────────────────────
+
 
 @dataclass
 class PlcConfig:
@@ -162,6 +163,7 @@ class Schema:
 
 
 # ── Schema JSON path ────────────────────────────────────────────────────────
+
 
 def _find_schema_json() -> Path:
     """Locate schema.json: check package dir first, then repo root."""
@@ -343,10 +345,7 @@ def _validate_schema(
     seen_ids: dict[int, str] = {}
     for msg in messages:
         if msg.id in seen_ids:
-            raise SchemaError(
-                f"Duplicate CAN ID 0x{msg.id:X}: "
-                f"'{msg.name}' and '{seen_ids[msg.id]}'"
-            )
+            raise SchemaError(f"Duplicate CAN ID 0x{msg.id:X}: " f"'{msg.name}' and '{seen_ids[msg.id]}'")
         seen_ids[msg.id] = msg.name
 
     for msg in messages:
@@ -357,45 +356,27 @@ def _validate_schema(
             # Rule 1: real requires min, max, resolution
             if typ == "real":
                 if f.min is None or f.max is None or f.resolution is None:
-                    raise SchemaError(
-                        f"{msg.name}.{f.name}: type 'real' requires "
-                        f"min, max, and resolution"
-                    )
+                    raise SchemaError(f"{msg.name}.{f.name}: type 'real' requires " f"min, max, and resolution")
 
             # Rule 2: resolution only on real
             if typ != "real" and f.resolution is not None:
-                raise SchemaError(
-                    f"{msg.name}.{f.name}: 'resolution' is only "
-                    f"valid on type 'real'"
-                )
+                raise SchemaError(f"{msg.name}.{f.name}: 'resolution' is only " f"valid on type 'real'")
 
             # Rule 3: min/max on bool or enum
             if typ == "bool" and (f.min is not None or f.max is not None):
-                raise SchemaError(
-                    f"{msg.name}.{f.name}: 'min'/'max' not valid on "
-                    f"type 'bool'"
-                )
+                raise SchemaError(f"{msg.name}.{f.name}: 'min'/'max' not valid on " f"type 'bool'")
             if typ in enum_names and (f.min is not None or f.max is not None):
-                raise SchemaError(
-                    f"{msg.name}.{f.name}: 'min'/'max' not valid on "
-                    f"enum type '{typ}'"
-                )
+                raise SchemaError(f"{msg.name}.{f.name}: 'min'/'max' not valid on " f"enum type '{typ}'")
 
             # Rule 7: undeclared enum reference
-            if (
-                typ not in ENDPOINT_TYPES
-                and typ not in enum_names
-            ):
-                raise SchemaError(
-                    f"{msg.name}.{f.name}: unknown type '{typ}'"
-                )
+            if typ not in ENDPOINT_TYPES and typ not in enum_names:
+                raise SchemaError(f"{msg.name}.{f.name}: unknown type '{typ}'")
 
             # Rule 8: unsigned type with min < 0
             if typ in ENDPOINT_TYPES and typ.startswith("uint"):
                 if f.min is not None and f.min < 0:
                     raise SchemaError(
-                        f"{msg.name}.{f.name}: unsigned type '{typ}' "
-                        f"cannot have negative min ({f.min})"
+                        f"{msg.name}.{f.name}: unsigned type '{typ}' " f"cannot have negative min ({f.min})"
                     )
 
             # Rule 4: integer range outside endpoint type
@@ -408,24 +389,16 @@ def _validate_schema(
                     ]
                     # Identify which bound(s) exceeded
                     if f.max > type_max:
-                        lines.append(
-                            f"  max value {f.max} exceeds {typ} range [{type_min}, {type_max}]."
-                        )
+                        lines.append(f"  max value {f.max} exceeds {typ} range [{type_min}, {type_max}].")
                     if f.min < type_min:
-                        lines.append(
-                            f"  min value {f.min} exceeds {typ} range [{type_min}, {type_max}]."
-                        )
+                        lines.append(f"  min value {f.min} exceeds {typ} range [{type_min}, {type_max}].")
                     lines.append("")
                     # Suggest next wider type or range reduction
                     wider = _next_wider_type(typ)
                     if wider and f.max > type_max:
-                        lines.append(
-                            f"  Either widen the type to {wider}, or reduce max to {type_max}."
-                        )
+                        lines.append(f"  Either widen the type to {wider}, or reduce max to {type_max}.")
                     elif wider and f.min < type_min:
-                        lines.append(
-                            f"  Either widen the type to {wider}, or increase min to {type_min}."
-                        )
+                        lines.append(f"  Either widen the type to {wider}, or increase min to {type_min}.")
                     elif f.max > type_max:
                         lines.append(f"  Reduce max to {type_max}.")
                     else:
@@ -437,9 +410,7 @@ def _validate_schema(
             if typ == "bool":
                 bits = 1
             elif typ in enum_names:
-                max_val = max(enums[next(
-                    i for i, e in enumerate(enums) if e.name == typ
-                )].values.values())
+                max_val = max(enums[next(i for i, e in enumerate(enums) if e.name == typ)].values.values())
                 bits = _bits_for_unsigned(max_val)
             elif typ == "real":
                 assert f.min is not None and f.max is not None and f.resolution is not None
@@ -500,16 +471,12 @@ def _validate_schema(
                 sign_label = "signed" if is_signed else "unsigned"
 
                 real_notes.append(
-                    f"  Field '{f.name}' — type: real, "
-                    f"min: {f.min}, max: {f.max}, resolution: {f.resolution}"
+                    f"  Field '{f.name}' — type: real, " f"min: {f.min}, max: {f.max}, resolution: {f.resolution}"
                 )
                 real_notes.append(
-                    f"    Inferred wire range: [{wire_min}, {wire_max}] "
-                    f"\u2192 {bits} bits ({sign_label})"
+                    f"    Inferred wire range: [{wire_min}, {wire_max}] " f"\u2192 {bits} bits ({sign_label})"
                 )
-                real_notes.append(
-                    f"    This field uses {bits} of 64 available bits."
-                )
+                real_notes.append(f"    This field uses {bits} of 64 available bits.")
 
                 # Suggest coarser resolutions (×10 and ×100)
                 suggestions: list[str] = []
@@ -524,9 +491,7 @@ def _validate_schema(
                     if c_bits < bits:
                         suggestions.append(f"{coarser} (\u2192 {c_bits} bits)")
                 if suggestions:
-                    real_notes.append(
-                        f"    Consider widening resolution to {' or '.join(suggestions)}."
-                    )
+                    real_notes.append(f"    Consider widening resolution to {' or '.join(suggestions)}.")
 
             if real_notes:
                 lines.append("")

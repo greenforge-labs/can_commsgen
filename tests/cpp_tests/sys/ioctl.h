@@ -7,7 +7,8 @@
 #define SIOCGIFINDEX 0x8933
 
 inline int ioctl(int /*fd*/, unsigned long req, ...) {
-    if (stub().ioctl_fail) return -1;
+    if (stub().ioctl_fail)
+        return -1;
 
     va_list args;
     va_start(args, req);

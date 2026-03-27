@@ -49,10 +49,7 @@ def _cpp_field_type(field: FieldDef, enum_names: set[str]) -> str:
 def _enum_data(enum: EnumDef) -> dict[str, object]:
     """Prepare template data for an enum class."""
     max_name_len = max(len(name) for name in enum.values)
-    entries = [
-        f"{name.ljust(max_name_len)} = {value}"
-        for name, value in enum.values.items()
-    ]
+    entries = [f"{name.ljust(max_name_len)} = {value}" for name, value in enum.values.items()]
     return {
         "name": enum.name,
         "backing_type_cpp": enum.backing_type_cpp,
@@ -109,33 +106,21 @@ def _parse_lines(msg: MessageDef, enum_names: set[str]) -> list[str]:
 
         if f.type == "real":
             closing = f"{signed_str})".ljust(7)
-            extract = (
-                f"detail::extract_bits(frame.data, "
-                f"{offset_part} {bits_part} {closing}"
-            )
+            extract = f"detail::extract_bits(frame.data, " f"{offset_part} {bits_part} {closing}"
             lines.append(f"    {lhs} = {extract}* {f.resolution:g};")
         elif f.type == "bool":
             closing = f"{signed_str})".ljust(7)
-            extract = (
-                f"detail::extract_bits(frame.data, "
-                f"{offset_part} {bits_part} {closing}"
-            )
+            extract = f"detail::extract_bits(frame.data, " f"{offset_part} {bits_part} {closing}"
             lines.append(f"    {lhs} = {extract}!= 0;")
         elif f.type in enum_names:
             indent = " " * (4 + max_lhs_len + 3)
-            extract = (
-                f"detail::extract_bits(frame.data, "
-                f"{offset_part} {bits_part} {signed_str})"
-            )
+            extract = f"detail::extract_bits(frame.data, " f"{offset_part} {bits_part} {signed_str})"
             lines.append(f"    {lhs} = static_cast<{f.type}>(")
             lines.append(f"{indent}{extract});")
         else:
             cpp_type = ENDPOINT_TYPES[f.type][1]
             indent = " " * (4 + max_lhs_len + 3)
-            extract = (
-                f"detail::extract_bits(frame.data, "
-                f"{offset_part} {bits_part} {signed_str})"
-            )
+            extract = f"detail::extract_bits(frame.data, " f"{offset_part} {bits_part} {signed_str})"
             lines.append(f"    {lhs} = static_cast<{cpp_type}>(")
             lines.append(f"{indent}{extract});")
 
@@ -157,19 +142,13 @@ def _build_lines(msg: MessageDef, enum_names: set[str]) -> list[str]:
         bits_part = f"{f.wire_bits},".ljust(max_bits_digits + 1)
 
         if f.type == "real":
-            value_expr = (
-                f"static_cast<int64_t>"
-                f"(std::round(msg.{f.cpp_var_name} / {f.resolution:g}))"
-            )
+            value_expr = f"static_cast<int64_t>" f"(std::round(msg.{f.cpp_var_name} / {f.resolution:g}))"
         elif f.type == "bool":
             value_expr = f"msg.{f.cpp_var_name} ? 1 : 0"
         else:
             value_expr = f"static_cast<int64_t>(msg.{f.cpp_var_name})"
 
-        lines.append(
-            f"    detail::insert_bits(frame.data, "
-            f"{offset_part} {bits_part} {value_expr});"
-        )
+        lines.append(f"    detail::insert_bits(frame.data, " f"{offset_part} {bits_part} {value_expr});")
 
     return lines
 
@@ -211,21 +190,14 @@ def generate_cpp(schema: Schema, output_dir: Path) -> None:
     messages = [_message_data(m, enum_names) for m in schema.messages]
 
     rendered = env.get_template("can_messages.hpp.j2").render(
-        enums=enums, messages=messages,
+        enums=enums,
+        messages=messages,
     )
     (output_dir / "can_messages.hpp").write_text(rendered)
 
     # --- can_interface.hpp / .cpp ---
-    plc_to_pc = [
-        _interface_message_data(m)
-        for m in schema.messages
-        if m.direction == "plc_to_pc"
-    ]
-    pc_to_plc = [
-        _interface_message_data(m)
-        for m in schema.messages
-        if m.direction == "pc_to_plc"
-    ]
+    plc_to_pc = [_interface_message_data(m) for m in schema.messages if m.direction == "plc_to_pc"]
+    pc_to_plc = [_interface_message_data(m) for m in schema.messages if m.direction == "pc_to_plc"]
     timeout_msgs = [m for m in plc_to_pc if m["timeout_ms"] is not None]
 
     interface_ctx = {

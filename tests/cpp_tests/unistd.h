@@ -2,17 +2,16 @@
 #pragma once
 #include <cstddef>
 #include <cstring>
-#include <stub_state.h>
 #include <errno.h>
+#include <stub_state.h>
 
 int errno = 0;
 
 inline long read(int /*fd*/, void *buf, size_t count) {
     auto &s = stub();
-    if (s.read_errno_at >= 0 &&
-        static_cast<int>(s.rx_pos) == s.read_errno_at) {
+    if (s.read_errno_at >= 0 && static_cast<int>(s.rx_pos) == s.read_errno_at) {
         errno = s.read_errno_val;
-        s.read_errno_at = -1;  // fire once
+        s.read_errno_at = -1; // fire once
         return -1;
     }
     if (s.rx_pos >= s.rx_queue.size()) {
@@ -21,7 +20,7 @@ inline long read(int /*fd*/, void *buf, size_t count) {
     }
     if (s.read_short) {
         s.read_short = false;
-        return 4;  // incomplete frame
+        return 4; // incomplete frame
     }
     if (count < sizeof(can_frame)) {
         errno = EAGAIN;
@@ -33,7 +32,8 @@ inline long read(int /*fd*/, void *buf, size_t count) {
 }
 
 inline long write(int /*fd*/, const void *buf, size_t count) {
-    if (stub().write_fail) return -1;
+    if (stub().write_fail)
+        return -1;
     if (count == sizeof(can_frame)) {
         can_frame f{};
         std::memcpy(&f, buf, sizeof(f));

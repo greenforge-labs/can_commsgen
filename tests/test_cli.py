@@ -33,10 +33,14 @@ def test_cli_smoke(tmp_path: Path) -> None:
     result = runner.invoke(
         main,
         [
-            "--schema", str(EXAMPLE_SCHEMA),
-            "--out-plc", str(plc_dir),
-            "--out-cpp", str(cpp_dir),
-            "--out-report", str(report_path),
+            "--schema",
+            str(EXAMPLE_SCHEMA),
+            "--out-plc",
+            str(plc_dir),
+            "--out-cpp",
+            str(cpp_dir),
+            "--out-report",
+            str(report_path),
         ],
     )
 
@@ -64,9 +68,12 @@ def test_cli_no_report(tmp_path: Path) -> None:
     result = runner.invoke(
         main,
         [
-            "--schema", str(EXAMPLE_SCHEMA),
-            "--out-plc", str(plc_dir),
-            "--out-cpp", str(cpp_dir),
+            "--schema",
+            str(EXAMPLE_SCHEMA),
+            "--out-plc",
+            str(plc_dir),
+            "--out-cpp",
+            str(cpp_dir),
         ],
     )
 
@@ -85,9 +92,12 @@ def test_cli_invalid_schema(tmp_path: Path) -> None:
     result = runner.invoke(
         main,
         [
-            "--schema", str(bad_schema),
-            "--out-plc", str(tmp_path / "plc"),
-            "--out-cpp", str(tmp_path / "cpp"),
+            "--schema",
+            str(bad_schema),
+            "--out-plc",
+            str(tmp_path / "plc"),
+            "--out-cpp",
+            str(tmp_path / "cpp"),
         ],
     )
 

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 import shutil
 import subprocess
-from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
+import pytest
 
 from can_commsgen.cli import main
 
@@ -47,10 +47,14 @@ def test_e2e_snapshot_all_outputs(tmp_path: Path) -> None:
     result = runner.invoke(
         main,
         [
-            "--schema", str(EXAMPLE_SCHEMA),
-            "--out-plc", str(plc_dir),
-            "--out-cpp", str(cpp_dir),
-            "--out-report", str(report_path),
+            "--schema",
+            str(EXAMPLE_SCHEMA),
+            "--out-plc",
+            str(plc_dir),
+            "--out-cpp",
+            str(cpp_dir),
+            "--out-report",
+            str(report_path),
         ],
     )
 
@@ -60,44 +64,37 @@ def test_e2e_snapshot_all_outputs(tmp_path: Path) -> None:
     for fname in GOLDEN_PLC_FILES:
         golden = (GOLDEN / "plc" / fname).read_text()
         generated = (plc_dir / fname).read_text()
-        assert generated == golden, (
-            f"PLC file {fname} does not match golden file"
-        )
+        assert generated == golden, f"PLC file {fname} does not match golden file"
 
     # Compare C++ golden files
     for fname in GOLDEN_CPP_FILES:
         golden = (GOLDEN / "cpp" / fname).read_text()
         generated = (cpp_dir / fname).read_text()
-        assert generated == golden, (
-            f"C++ file {fname} does not match golden file"
-        )
+        assert generated == golden, f"C++ file {fname} does not match golden file"
 
     # Compare report golden file
     for fname in GOLDEN_REPORT_FILES:
         golden = (GOLDEN / "report" / fname).read_text()
         generated = report_path.read_text()
-        assert generated == golden, (
-            f"Report file {fname} does not match golden file"
-        )
+        assert generated == golden, f"Report file {fname} does not match golden file"
 
     # Verify no unexpected files were generated
     generated_plc_files = sorted(f.name for f in plc_dir.iterdir())
-    assert generated_plc_files == sorted(GOLDEN_PLC_FILES), (
-        f"Unexpected PLC files: {set(generated_plc_files) - set(GOLDEN_PLC_FILES)}"
-    )
+    assert generated_plc_files == sorted(
+        GOLDEN_PLC_FILES
+    ), f"Unexpected PLC files: {set(generated_plc_files) - set(GOLDEN_PLC_FILES)}"
 
     generated_cpp_files = sorted(f.name for f in cpp_dir.iterdir())
-    assert generated_cpp_files == sorted(GOLDEN_CPP_FILES), (
-        f"Unexpected C++ files: {set(generated_cpp_files) - set(GOLDEN_CPP_FILES)}"
-    )
+    assert generated_cpp_files == sorted(
+        GOLDEN_CPP_FILES
+    ), f"Unexpected C++ files: {set(generated_cpp_files) - set(GOLDEN_CPP_FILES)}"
 
 
 def test_multi_schema_merge(tmp_path: Path) -> None:
     """Split example schema into two files, merge via CLI, verify output matches golden."""
     # File 1: motor_command only (no enums)
     schema_a = tmp_path / "schema_a.yaml"
-    schema_a.write_text(
-        """\
+    schema_a.write_text("""\
 version: "1"
 
 plc:
@@ -121,13 +118,11 @@ messages:
         max: 655.35
         resolution: 0.01
         unit: Nm
-"""
-    )
+""")
 
     # File 2: drive_status + pc_state (with DriveMode enum)
     schema_b = tmp_path / "schema_b.yaml"
-    schema_b.write_text(
-        """\
+    schema_b.write_text("""\
 version: "1"
 
 plc:
@@ -174,8 +169,7 @@ messages:
     fields:
       - name: drive_mode
         type: DriveMode
-"""
-    )
+""")
 
     plc_dir = tmp_path / "plc"
     cpp_dir = tmp_path / "cpp"
@@ -185,11 +179,16 @@ messages:
     result = runner.invoke(
         main,
         [
-            "--schema", str(schema_a),
-            "--schema", str(schema_b),
-            "--out-plc", str(plc_dir),
-            "--out-cpp", str(cpp_dir),
-            "--out-report", str(report_path),
+            "--schema",
+            str(schema_a),
+            "--schema",
+            str(schema_b),
+            "--out-plc",
+            str(plc_dir),
+            "--out-cpp",
+            str(cpp_dir),
+            "--out-report",
+            str(report_path),
         ],
     )
 
@@ -199,17 +198,13 @@ messages:
     for fname in GOLDEN_PLC_FILES:
         golden = (GOLDEN / "plc" / fname).read_text()
         generated = (plc_dir / fname).read_text()
-        assert generated == golden, (
-            f"PLC file {fname} does not match golden file"
-        )
+        assert generated == golden, f"PLC file {fname} does not match golden file"
 
     # Compare C++ golden files
     for fname in GOLDEN_CPP_FILES:
         golden = (GOLDEN / "cpp" / fname).read_text()
         generated = (cpp_dir / fname).read_text()
-        assert generated == golden, (
-            f"C++ file {fname} does not match golden file"
-        )
+        assert generated == golden, f"C++ file {fname} does not match golden file"
 
     # Compare report golden file
     golden = (GOLDEN / "report" / "packing_report.txt").read_text()
@@ -231,9 +226,12 @@ def test_cpp_roundtrip_via_cli(tmp_path: Path) -> None:
     result = runner.invoke(
         main,
         [
-            "--schema", str(EXAMPLE_SCHEMA),
-            "--out-plc", str(plc_dir),
-            "--out-cpp", str(cpp_dir),
+            "--schema",
+            str(EXAMPLE_SCHEMA),
+            "--out-plc",
+            str(plc_dir),
+            "--out-cpp",
+            str(cpp_dir),
         ],
     )
     assert result.exit_code == 0, f"CLI failed:\n{result.output}"
@@ -255,9 +253,7 @@ def test_cpp_roundtrip_via_cli(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
-    assert cmake_result.returncode == 0, (
-        f"cmake configure failed:\n{cmake_result.stderr}"
-    )
+    assert cmake_result.returncode == 0, f"cmake configure failed:\n{cmake_result.stderr}"
 
     build_result = subprocess.run(
         ["cmake", "--build", "."],
@@ -265,9 +261,7 @@ def test_cpp_roundtrip_via_cli(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
-    assert build_result.returncode == 0, (
-        f"cmake build failed:\n{build_result.stderr}"
-    )
+    assert build_result.returncode == 0, f"cmake build failed:\n{build_result.stderr}"
 
     # Run roundtrip tests via ctest
     test_result = subprocess.run(
@@ -276,6 +270,4 @@ def test_cpp_roundtrip_via_cli(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
-    assert test_result.returncode == 0, (
-        f"C++ roundtrip tests failed:\n{test_result.stdout}\n{test_result.stderr}"
-    )
+    assert test_result.returncode == 0, f"C++ roundtrip tests failed:\n{test_result.stdout}\n{test_result.stderr}"

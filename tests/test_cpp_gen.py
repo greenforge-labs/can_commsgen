@@ -1,8 +1,8 @@
 """Tests for C++ code generation."""
 
+from pathlib import Path
 import shutil
 import subprocess
-from pathlib import Path
 
 import pytest
 
@@ -84,9 +84,7 @@ def test_cpp_roundtrip(
         capture_output=True,
         text=True,
     )
-    assert cmake_result.returncode == 0, (
-        f"cmake configure failed:\n{cmake_result.stderr}"
-    )
+    assert cmake_result.returncode == 0, f"cmake configure failed:\n{cmake_result.stderr}"
 
     build_result = subprocess.run(
         ["cmake", "--build", "."],
@@ -94,9 +92,7 @@ def test_cpp_roundtrip(
         capture_output=True,
         text=True,
     )
-    assert build_result.returncode == 0, (
-        f"cmake build failed:\n{build_result.stderr}"
-    )
+    assert build_result.returncode == 0, f"cmake build failed:\n{build_result.stderr}"
 
     # Run the roundtrip tests via ctest
     test_result = subprocess.run(
@@ -105,6 +101,4 @@ def test_cpp_roundtrip(
         capture_output=True,
         text=True,
     )
-    assert test_result.returncode == 0, (
-        f"C++ roundtrip tests failed:\n{test_result.stdout}\n{test_result.stderr}"
-    )
+    assert test_result.returncode == 0, f"C++ roundtrip tests failed:\n{test_result.stdout}\n{test_result.stderr}"

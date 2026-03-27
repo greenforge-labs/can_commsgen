@@ -1,19 +1,18 @@
 // THIS FILE IS AUTO-GENERATED. DO NOT EDIT.
-#include <errno.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <linux/can/raw.h>
-#include <unistd.h>
-#include <cstring>
-#include <stdexcept>
 #include "can_interface.hpp"
+#include <cstring>
+#include <errno.h>
+#include <linux/can/raw.h>
+#include <net/if.h>
+#include <poll.h>
+#include <stdexcept>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 namespace project_can {
 
-CanInterface::CanInterface(std::string can_device, Handlers handlers)
-    : handlers_(std::move(handlers)) {
+CanInterface::CanInterface(std::string can_device, Handlers handlers) : handlers_(std::move(handlers)) {
     socket_fd_ = socket(PF_CAN, SOCK_RAW | SOCK_NONBLOCK, CAN_RAW);
     if (socket_fd_ < 0) {
         throw std::runtime_error("Failed to create CAN socket: " + std::string(strerror(errno)));
@@ -25,23 +24,24 @@ CanInterface::CanInterface(std::string can_device, Handlers handlers)
 
     if (ioctl(socket_fd_, SIOCGIFINDEX, &ifr) < 0) {
         close(socket_fd_);
-        throw std::runtime_error("Failed to get interface index for " + can_device + ": " + std::string(strerror(errno)));
+        throw std::runtime_error(
+            "Failed to get interface index for " + can_device + ": " + std::string(strerror(errno))
+        );
     }
 
     struct sockaddr_can addr{};
     addr.can_family = AF_CAN;
     addr.can_ifindex = ifr.ifr_ifindex;
 
-    if (bind(socket_fd_, reinterpret_cast<struct sockaddr *>(&addr),
-             sizeof(addr)) < 0) {
+    if (bind(socket_fd_, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr)) < 0) {
         close(socket_fd_);
         throw std::runtime_error("Failed to bind CAN socket: " + std::string(strerror(errno)));
     }
 
     auto filters = compute_filters();
     if (!filters.empty()) {
-        if (setsockopt(socket_fd_, SOL_CAN_RAW, CAN_RAW_FILTER,
-                       filters.data(), filters.size() * sizeof(can_filter)) < 0) {
+        if (setsockopt(socket_fd_, SOL_CAN_RAW, CAN_RAW_FILTER, filters.data(), filters.size() * sizeof(can_filter)) <
+            0) {
             close(socket_fd_);
             throw std::runtime_error("Failed to set CAN filters: " + std::string(strerror(errno)));
         }
@@ -90,12 +90,13 @@ void CanInterface::process_frames(size_t max_frames) {
 
         uint32_t id = frame.can_id & CAN_EFF_MASK;
         switch (id) {
-            case 0x00000200:
-                if (handlers_.on_drive_status) {
-                    auto parsed = parse_drive_status(frame);
-                    if (parsed) handlers_.on_drive_status(*parsed);
-                }
-                break;
+        case 0x00000200:
+            if (handlers_.on_drive_status) {
+                auto parsed = parse_drive_status(frame);
+                if (parsed)
+                    handlers_.on_drive_status(*parsed);
+            }
+            break;
         }
     }
 

@@ -15,47 +15,46 @@
 static int tests_run = 0;
 static int tests_passed = 0;
 
-#define PASS(label)                                                            \
-    do {                                                                       \
-        tests_run++;                                                           \
-        tests_passed++;                                                        \
-        std::printf("  pass: %s\n", label);                                    \
+#define PASS(label)                                                                                                    \
+    do {                                                                                                               \
+        tests_run++;                                                                                                   \
+        tests_passed++;                                                                                                \
+        std::printf("  pass: %s\n", label);                                                                            \
     } while (0)
 
-#define FAIL(label, msg)                                                       \
-    do {                                                                       \
-        tests_run++;                                                           \
-        std::fprintf(stderr, "FAIL: %s: %s\n", label, msg);                   \
-        std::exit(1);                                                          \
+#define FAIL(label, msg)                                                                                               \
+    do {                                                                                                               \
+        tests_run++;                                                                                                   \
+        std::fprintf(stderr, "FAIL: %s: %s\n", label, msg);                                                            \
+        std::exit(1);                                                                                                  \
     } while (0)
 
-#define ASSERT_TRUE(cond, label)                                               \
-    do {                                                                       \
-        if (!(cond)) FAIL(label, "expected true");                             \
-        PASS(label);                                                           \
+#define ASSERT_TRUE(cond, label)                                                                                       \
+    do {                                                                                                               \
+        if (!(cond))                                                                                                   \
+            FAIL(label, "expected true");                                                                              \
+        PASS(label);                                                                                                   \
     } while (0)
 
-#define ASSERT_EQ(actual, expected, label)                                     \
-    do {                                                                       \
-        if ((actual) != (expected)) {                                          \
-            std::fprintf(stderr, "FAIL: %s: expected %d, got %d\n",           \
-                         label, (int)(expected), (int)(actual));               \
-            tests_run++;                                                       \
-            std::exit(1);                                                      \
-        }                                                                      \
-        PASS(label);                                                           \
+#define ASSERT_EQ(actual, expected, label)                                                                             \
+    do {                                                                                                               \
+        if ((actual) != (expected)) {                                                                                  \
+            std::fprintf(stderr, "FAIL: %s: expected %d, got %d\n", label, (int)(expected), (int)(actual));            \
+            tests_run++;                                                                                               \
+            std::exit(1);                                                                                              \
+        }                                                                                                              \
+        PASS(label);                                                                                                   \
     } while (0)
 
-#define ASSERT_NEAR(actual, expected, tol, label)                              \
-    do {                                                                       \
-        double a_ = (actual), e_ = (expected), t_ = (tol);                    \
-        if (std::abs(a_ - e_) > t_) {                                         \
-            std::fprintf(stderr, "FAIL: %s: expected %.6f, got %.6f\n",       \
-                         label, e_, a_);                                       \
-            tests_run++;                                                       \
-            std::exit(1);                                                      \
-        }                                                                      \
-        PASS(label);                                                           \
+#define ASSERT_NEAR(actual, expected, tol, label)                                                                      \
+    do {                                                                                                               \
+        double a_ = (actual), e_ = (expected), t_ = (tol);                                                             \
+        if (std::abs(a_ - e_) > t_) {                                                                                  \
+            std::fprintf(stderr, "FAIL: %s: expected %.6f, got %.6f\n", label, e_, a_);                                \
+            tests_run++;                                                                                               \
+            std::exit(1);                                                                                              \
+        }                                                                                                              \
+        PASS(label);                                                                                                   \
     } while (0)
 
 using namespace project_can;
@@ -181,8 +180,7 @@ void test_send_pc_state() {
 
     auto parsed = parse_pc_state(f);
     ASSERT_TRUE(parsed.has_value(), "parse succeeds");
-    ASSERT_EQ(static_cast<int>(parsed->drive_mode),
-              static_cast<int>(DriveMode::TORQUE), "drive_mode roundtrip");
+    ASSERT_EQ(static_cast<int>(parsed->drive_mode), static_cast<int>(DriveMode::TORQUE), "drive_mode roundtrip");
 }
 
 // ---------------------------------------------------------------------------
@@ -275,7 +273,7 @@ void test_process_frames_no_handler_set() {
     stub().rx_queue.push_back(build_drive_status(tx));
     stub().rx_pos = 0;
 
-    iface.process_frames();  // should not crash
+    iface.process_frames(); // should not crash
     PASS("no crash with unset handler");
 }
 
@@ -316,7 +314,7 @@ void test_process_frames_real_error_throws() {
     stub().rx_queue.push_back(build_drive_status(tx));
     stub().rx_pos = 0;
     stub().read_errno_at = 0;
-    stub().read_errno_val = 5;  // EIO
+    stub().read_errno_val = 5; // EIO
 
     bool threw = false;
     try {
@@ -377,8 +375,7 @@ void test_filters_installed_with_handler() {
     auto iface = CanInterface("vcan0", h);
 
     ASSERT_EQ(stub().installed_filters.size(), 1, "one filter installed");
-    ASSERT_EQ(stub().installed_filters[0].can_id,
-              0x00000200 | CAN_EFF_FLAG, "filter matches drive_status ID");
+    ASSERT_EQ(stub().installed_filters[0].can_id, 0x00000200 | CAN_EFF_FLAG, "filter matches drive_status ID");
 }
 
 void test_no_filters_without_handlers() {
@@ -482,7 +479,6 @@ int main() {
 
     test_destructor_closes_socket();
 
-    std::printf("\nOK: %d/%d can_interface tests passed\n",
-                tests_passed, tests_run);
+    std::printf("\nOK: %d/%d can_interface tests passed\n", tests_passed, tests_run);
     return 0;
 }
