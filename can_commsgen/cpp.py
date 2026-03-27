@@ -48,8 +48,7 @@ def _cpp_field_type(field: FieldDef, enum_names: set[str]) -> str:
 
 def _enum_data(enum: EnumDef) -> dict[str, object]:
     """Prepare template data for an enum class."""
-    max_name_len = max(len(name) for name in enum.values)
-    entries = [f"{name.ljust(max_name_len)} = {value}" for name, value in enum.values.items()]
+    entries = [f"{name} = {value}" for name, value in enum.values.items()]
     return {
         "name": enum.name,
         "backing_type_cpp": enum.backing_type_cpp,
@@ -80,7 +79,7 @@ def _struct_members(msg: MessageDef, enum_names: set[str]) -> list[str]:
     members: list[str] = []
     for decl, comment in zip(decls, comments):
         if comment:
-            members.append(f"{decl.ljust(max_decl_len)}  {comment}")
+            members.append(f"{decl.ljust(max_decl_len)} {comment}")
         else:
             members.append(decl)
 
@@ -93,36 +92,21 @@ def _parse_lines(msg: MessageDef, enum_names: set[str]) -> list[str]:
     if not fields:
         return []
 
-    max_lhs_len = max(len(f"msg.{f.cpp_var_name}") for f in fields)
-    max_offset_digits = max(len(str(f.bit_offset)) for f in fields)
-    max_bits_digits = max(len(str(f.wire_bits)) for f in fields)
-
     lines: list[str] = []
     for f in fields:
-        lhs = f"msg.{f.cpp_var_name}".ljust(max_lhs_len)
-        offset_part = f"{f.bit_offset},".ljust(max_offset_digits + 1)
-        bits_part = f"{f.wire_bits},".ljust(max_bits_digits + 1)
+        lhs = f"msg.{f.cpp_var_name}"
         signed_str = "true" if f.wire_signed else "false"
+        extract = f"detail::extract_bits(frame.data, {f.bit_offset}, {f.wire_bits}, {signed_str})"
 
         if f.type == "real":
-            closing = f"{signed_str})".ljust(7)
-            extract = f"detail::extract_bits(frame.data, " f"{offset_part} {bits_part} {closing}"
-            lines.append(f"    {lhs} = {extract}* {f.resolution:g};")
+            lines.append(f"    {lhs} = {extract} * {f.resolution:g};")
         elif f.type == "bool":
-            closing = f"{signed_str})".ljust(7)
-            extract = f"detail::extract_bits(frame.data, " f"{offset_part} {bits_part} {closing}"
-            lines.append(f"    {lhs} = {extract}!= 0;")
+            lines.append(f"    {lhs} = {extract} != 0;")
         elif f.type in enum_names:
-            indent = " " * (4 + max_lhs_len + 3)
-            extract = f"detail::extract_bits(frame.data, " f"{offset_part} {bits_part} {signed_str})"
-            lines.append(f"    {lhs} = static_cast<{f.type}>(")
-            lines.append(f"{indent}{extract});")
+            lines.append(f"    {lhs} = static_cast<{f.type}>({extract});")
         else:
             cpp_type = ENDPOINT_TYPES[f.type][1]
-            indent = " " * (4 + max_lhs_len + 3)
-            extract = f"detail::extract_bits(frame.data, " f"{offset_part} {bits_part} {signed_str})"
-            lines.append(f"    {lhs} = static_cast<{cpp_type}>(")
-            lines.append(f"{indent}{extract});")
+            lines.append(f"    {lhs} = static_cast<{cpp_type}>({extract});")
 
     return lines
 
@@ -133,22 +117,16 @@ def _build_lines(msg: MessageDef, enum_names: set[str]) -> list[str]:
     if not fields:
         return []
 
-    max_offset_digits = max(len(str(f.bit_offset)) for f in fields)
-    max_bits_digits = max(len(str(f.wire_bits)) for f in fields)
-
     lines: list[str] = []
     for f in fields:
-        offset_part = f"{f.bit_offset},".ljust(max_offset_digits + 1)
-        bits_part = f"{f.wire_bits},".ljust(max_bits_digits + 1)
-
         if f.type == "real":
-            value_expr = f"static_cast<int64_t>" f"(std::round(msg.{f.cpp_var_name} / {f.resolution:g}))"
+            value_expr = f"static_cast<int64_t>(std::round(msg.{f.cpp_var_name} / {f.resolution:g}))"
         elif f.type == "bool":
             value_expr = f"msg.{f.cpp_var_name} ? 1 : 0"
         else:
             value_expr = f"static_cast<int64_t>(msg.{f.cpp_var_name})"
 
-        lines.append(f"    detail::insert_bits(frame.data, " f"{offset_part} {bits_part} {value_expr});")
+        lines.append(f"    detail::insert_bits(frame.data, {f.bit_offset}, {f.wire_bits}, {value_expr});")
 
     return lines
 

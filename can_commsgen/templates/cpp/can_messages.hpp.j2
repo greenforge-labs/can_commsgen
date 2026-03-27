@@ -2,8 +2,8 @@
 #pragma once
 #include <cmath>
 #include <cstdint>
-#include <optional>
 #include <linux/can.h>
+#include <optional>
 
 namespace project_can {
 
@@ -32,12 +32,11 @@ struct {{ msg.struct_name }} {
 
 namespace detail {
 
-inline int64_t extract_bits(const uint8_t data[8], uint16_t bit_offset,
-                            uint16_t bit_count, bool is_signed) {
+inline int64_t extract_bits(const uint8_t data[8], uint16_t bit_offset, uint16_t bit_count, bool is_signed) {
     uint64_t raw = 0;
     for (uint16_t i = 0; i < bit_count; ++i) {
         uint16_t byte_idx = (bit_offset + i) / 8;
-        uint16_t bit_idx  = (bit_offset + i) % 8;
+        uint16_t bit_idx = (bit_offset + i) % 8;
         if (data[byte_idx] & (1u << bit_idx))
             raw |= (uint64_t{1} << i);
     }
@@ -47,12 +46,11 @@ inline int64_t extract_bits(const uint8_t data[8], uint16_t bit_offset,
     return static_cast<int64_t>(raw);
 }
 
-inline void insert_bits(uint8_t data[8], uint16_t bit_offset,
-                        uint16_t bit_count, int64_t value) {
+inline void insert_bits(uint8_t data[8], uint16_t bit_offset, uint16_t bit_count, int64_t value) {
     auto raw = static_cast<uint64_t>(value);
     for (uint16_t i = 0; i < bit_count; ++i) {
         uint16_t byte_idx = (bit_offset + i) / 8;
-        uint16_t bit_idx  = (bit_offset + i) % 8;
+        uint16_t bit_idx = (bit_offset + i) % 8;
         if (raw & (uint64_t{1} << i))
             data[byte_idx] |= (1u << bit_idx);
         else
@@ -67,8 +65,10 @@ inline void insert_bits(uint8_t data[8], uint16_t bit_offset,
 
 // {{ msg.comment }}
 inline std::optional<{{ msg.struct_name }}> parse_{{ msg.name }}(const can_frame &frame) {
-    if ((frame.can_id & CAN_EFF_MASK) != {{ msg.can_id_hex }}) return std::nullopt;
-    if (frame.can_dlc != {{ msg.dlc }}) return std::nullopt;
+    if ((frame.can_id & CAN_EFF_MASK) != {{ msg.can_id_hex }})
+        return std::nullopt;
+    if (frame.can_dlc != {{ msg.dlc }})
+        return std::nullopt;
 
     {{ msg.struct_name }} msg;
 {% for line in msg.parse_lines %}
@@ -84,7 +84,7 @@ inline std::optional<{{ msg.struct_name }}> parse_{{ msg.name }}(const can_frame
 // {{ msg.comment }}
 inline can_frame build_{{ msg.name }}(const {{ msg.struct_name }} &msg) {
     can_frame frame{};
-    frame.can_id  = {{ msg.can_id_hex }} | CAN_EFF_FLAG;
+    frame.can_id = {{ msg.can_id_hex }} | CAN_EFF_FLAG;
     frame.can_dlc = {{ msg.dlc }};
 
 {% for line in msg.build_lines %}

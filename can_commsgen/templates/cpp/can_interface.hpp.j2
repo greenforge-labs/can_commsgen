@@ -1,17 +1,16 @@
 // THIS FILE IS AUTO-GENERATED. DO NOT EDIT.
 #pragma once
+#include "can_messages.hpp"
 #include <chrono>
 #include <functional>
-#include <memory>
+#include <linux/can.h>
 #include <string>
 #include <vector>
-#include <linux/can.h>
-#include "can_messages.hpp"
 
 namespace project_can {
 
 class CanInterface {
-public:
+  public:
     struct Handlers {
 {% for msg in plc_to_pc_messages %}
         // {{ msg.comment }}
@@ -28,6 +27,9 @@ public:
     CanInterface(const CanInterface &) = delete;
     CanInterface &operator=(const CanInterface &) = delete;
 
+    CanInterface(CanInterface &&other) noexcept;
+    CanInterface &operator=(CanInterface &&other) noexcept;
+
     void process_frames(size_t max_frames = 5);
     void wait_readable();
 
@@ -38,7 +40,7 @@ public:
 {% endfor %}
 
 {% endif %}
-private:
+  private:
     std::vector<can_filter> compute_filters() const;
     void check_timeouts(std::chrono::steady_clock::time_point now);
 
@@ -51,8 +53,7 @@ private:
     {{ msg.struct_name }}TimeoutState {{ msg.name }}_timeout_state_;
 
 {% endfor %}
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+    int socket_fd_ = -1;
     Handlers handlers_;
 };
 
