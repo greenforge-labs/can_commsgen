@@ -11,6 +11,7 @@ can_commsgen = { path = ".", editable = true }
 pytest = "*"
 ruff = "*"
 pyright = "*"
+pre-commit = "*"
 
 [tasks]
 pytest = "pytest"
