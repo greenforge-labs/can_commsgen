@@ -1,10 +1,10 @@
 # can_commsgen
 
-A code generator that takes a single YAML schema and produces both **PLC Structured Text** (IEC 61131-3) and **C++ header-only** code for CAN bus communication -- keeping both sides perfectly in sync from one source of truth.
+A code generator that takes a single YAML schema and produces both **PLC Structured Text** (IEC 61131-3) and **C++ header + SocketCAN interface** code for CAN bus communication -- keeping both sides perfectly in sync from one source of truth.
 
 ## The Problem
 
-When a PLC and a PC communicate over CAN, every signal must be implemented twice: once in Structured Text and once in C++. Adding or modifying a single CAN signal means touching 4-6 files across both sides, with scale factors and bit layouts hardcoded independently. This creates drift risk, boilerplate duplication, and subtle bugs.
+When a PLC and a PC communicate over CAN, every signal must be implemented twice: once in Structured Text and once in C++. Adding or modifying a single CAN signal means touching multiple files across both sides, with scale factors and bit layouts hardcoded independently. This creates drift risk, boilerplate duplication, and subtle bugs.
 
 ## The Solution
 
@@ -14,6 +14,7 @@ Define your CAN messages once in YAML. `can_commsgen` generates all the boilerpl
 |--------|-------------|
 | **PLC Structured Text** | RECV/SEND function blocks, bit-level helpers, GVL, enum types, main input registration |
 | **C++ header** | Message structs, `parse_*`/`build_*` functions, bit-level helpers, enums (header-only, no .cpp needed) |
+| **C++ CanInterface** | SocketCAN class with typed `send()` overloads, receive-dispatch via handlers, and hardware CAN filters |
 | **Packing report** | Human-readable text showing bit layouts, wire ranges, and physical ranges for review |
 
 Generated files are never edited by hand -- regenerate and commit.
@@ -73,6 +74,18 @@ messages:
         max: 3200.0
         resolution: 0.1
         unit: rpm
+      - name: motor_temp
+        type: real
+        min: -40.0
+        max: 200.0
+        resolution: 0.1
+        unit: degC
+      - name: bus_voltage
+        type: real
+        min: 0.0
+        max: 102.3
+        resolution: 0.1
+        unit: V
       - name: fault_code
         type: uint8
 
@@ -110,22 +123,46 @@ myVelocity := GVL.targetVelocity_rpm;
 isAlive    := GVL.motorCommandWithinTimeout;
 ```
 
-**C++ side** -- parse incoming frames, build outgoing ones:
+**C++ side (low-level)** -- parse incoming frames, build outgoing ones:
 
 ```cpp
 #include "can_messages.hpp"
 
 // Parse a received frame
-auto msg = can_commsgen::parse_motor_command(frame);
+auto msg = project_can::parse_drive_status(frame);
 if (msg) {
-    std::cout << msg->target_velocity_rpm << " rpm\n";
+    std::cout << msg->actual_velocity_rpm << " rpm\n";
+    std::cout << msg->motor_temp_degC << " degC\n";
 }
 
 // Build a frame to send
-auto frame = can_commsgen::build_drive_status({
-    .actual_velocity_rpm = 1500.0,
-    .fault_code = 0
+auto frame = project_can::build_motor_command({
+    .target_velocity_rpm = 1500.0,
+    .torque_limit_Nm = 25.0
 });
+```
+
+**C++ side (CanInterface)** -- typed send/receive with SocketCAN:
+
+```cpp
+#include "can_interface.hpp"
+
+project_can::CanInterface can("can0", {
+    .on_drive_status = [](project_can::DriveStatus status) {
+        std::cout << status.actual_velocity_rpm << " rpm, "
+                  << status.motor_temp_degC << " degC\n";
+    }
+});
+
+// Send a message (type-safe overloads)
+can.send(project_can::MotorCommand{
+    .target_velocity_rpm = 1500.0,
+    .torque_limit_Nm = 25.0
+});
+
+// Process incoming frames (parses + dispatches to handlers)
+can.wait_readable();
+can.process_frames();
 ```
 
 ## Schema Reference
@@ -153,7 +190,7 @@ auto frame = can_commsgen::build_drive_status({
 
 ### Fields
 
-Fields are packed sequentially in big-endian bit order. Offsets are computed automatically.
+Fields are packed sequentially in little-endian bit order. Offsets are computed automatically.
 
 | Property | Required | Description |
 |----------|----------|-------------|
@@ -223,17 +260,34 @@ All files begin with `(* THIS FILE IS AUTO-GENERATED. DO NOT EDIT. *)`.
 
 RECV function blocks use ifm's `ifmRCAN.CAN_Rx` and write unpacked values into the GVL. SEND function blocks take field values as `VAR_INPUT` (they do not read from the GVL).
 
-### C++ Header
+### C++ Files
 
-A single `can_messages.hpp` is generated in the `can_commsgen` namespace containing:
+Three files are generated in the C++ output directory, all under the `project_can` namespace:
+
+| File | Purpose |
+|------|---------|
+| `can_messages.hpp` | Header-only: enums, message structs, `parse_*`/`build_*` functions, bit helpers |
+| `can_interface.hpp` | `CanInterface` class declaration with typed send/receive API |
+| `can_interface.cpp` | `CanInterface` implementation: SocketCAN socket, frame dispatch, CAN filters |
+
+**can_messages.hpp** contains:
 
 - **Enums** with explicit backing types (`enum class DriveMode : uint8_t`)
 - **Structs** with `double` for real fields, native C++ types for integers
 - **`parse_*` functions** -- take a `can_frame`, return `std::optional<Struct>` (checks ID and DLC)
 - **`build_*` functions** -- take a struct, return a `can_frame` with `CAN_EFF_FLAG` set
-- **Inline bit helpers** in the `detail` namespace
+- **Inline bit helpers** (`extract_bits`/`insert_bits`) in the `detail` namespace
 
 Parse and build functions are generated for every message regardless of direction, so both sides can encode and decode.
+
+**CanInterface** provides a higher-level API:
+
+- Constructor takes a SocketCAN device name (e.g. `"can0"`) and a `Handlers` struct with `std::function` callbacks for each `plc_to_pc` message
+- Type-safe `send()` overloads for each `pc_to_plc` message
+- `process_frames()` reads from the socket, parses frames, and dispatches to the appropriate handler
+- `wait_readable()` blocks until data is available on the socket
+- Hardware CAN filters are auto-configured based on which handlers are set
+- Move-only semantics (non-copyable)
 
 ### Packing Report
 
@@ -247,9 +301,20 @@ Schema: schema.yaml
 motor_command  (0x00000100, pc_to_plc, timeout 500ms)
   DLC: 4 bytes (32 bits used / 64 max)
 --------------------------------------------------------------------------------
-  Bit offset  Bits  Signed  Field               Wire range        Physical range        Resolution
-  0           16    yes     target_velocity      [-32000, 32000]   [-3200.0, 3200.0] rpm 0.1
-  16          16    no      torque_limit         [0, 65535]        [0.0, 655.35] Nm      0.01
+  Bit offset  Bits  Signed  Field               Type   Wire range          Physical range          Resolution
+  0           16    yes     target_velocity      real   [-32000, 32000]     [-3200.0, 3200.0] rpm   0.1
+  16          16    no      torque_limit         real   [0, 65535]          [0.0, 655.35] Nm        0.01
+================================================================================
+
+================================================================================
+drive_status  (0x00000200, plc_to_pc)
+  DLC: 6 bytes (46 bits used / 64 max)
+--------------------------------------------------------------------------------
+  Bit offset  Bits  Signed  Field               Type   Wire range          Physical range          Resolution
+  0           16    yes     actual_velocity      real   [-32000, 32000]     [-3200.0, 3200.0] rpm   0.1
+  16          12    yes     motor_temp           real   [-400, 2000]        [-40.0, 200.0] degC     0.1
+  28          10    no      bus_voltage          real   [0, 1023]           [0.0, 102.3] V          0.1
+  38          8     no      fault_code           uint8  [0, 255]            --                      --
 ================================================================================
 ```
 
@@ -301,12 +366,14 @@ pixi run pytest tests/                      # Tests (Python + C++ roundtrip)
 | `test_cli.py` | CLI smoke tests and error handling |
 | `test_integration.py` | End-to-end generation and multi-schema merge |
 
-A **C++ roundtrip test** in `tests/cpp_tests/` compiles the generated header and runs 34 parse/build roundtrip tests to verify bitpacking correctness:
+A **C++ roundtrip test** in `tests/cpp_tests/` compiles the generated header and runs parse/build roundtrip tests to verify bitpacking correctness:
 
 ```bash
 cd tests/cpp_tests
 cmake -B build && cmake --build build && ctest --output-on-failure
 ```
+
+A separate **CanInterface test** in the same directory verifies socket setup, handler dispatch, and CAN filter construction.
 
 ### Project Structure
 
@@ -316,14 +383,17 @@ can_commsgen/
 │   ├── cli.py              # Click CLI entrypoint
 │   ├── schema.py           # YAML loading, validation, wire type inference
 │   ├── plc.py              # PLC Structured Text generation
-│   ├── cpp.py              # C++ header generation
+│   ├── cpp.py              # C++ header + interface generation
 │   ├── report.py           # Packing report generation
 │   └── templates/
 │       ├── plc/            # 7 Jinja2 templates for ST files
-│       └── cpp/            # 1 Jinja2 template for the C++ header
+│       └── cpp/            # 3 Jinja2 templates (messages header, interface header + impl)
 ├── tests/
 │   ├── fixtures/           # Example YAML schemas
 │   ├── golden/             # Expected outputs for snapshot tests
+│   │   ├── plc/            # 8 golden PLC files
+│   │   ├── cpp/            # 3 golden C++ files
+│   │   └── report/         # 1 golden packing report
 │   └── cpp_tests/          # C++ compilation + roundtrip tests
 ├── schema.json             # JSON Schema for YAML validation
 ├── pyproject.toml
