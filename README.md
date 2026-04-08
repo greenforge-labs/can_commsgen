@@ -112,15 +112,32 @@ can_commsgen \
 
 ### Use the Generated Code
 
-**PLC side** -- call RECV function blocks in your main loop; read values from the GVL:
+**PLC side** -- the generated `main_input.st` calls all RECV function blocks for you. Read received values from the GVL and call SEND function blocks to transmit:
 
 ```pascal
-(* In main program *)
-MOTOR_COMMAND_RECV(channel := ifmDevice.CAN_CHANNEL.CHAN_0);
+(* main_input.st is auto-generated and calls all RECV FBs.
+   Just add it to your PLC program -- no manual wiring needed. *)
 
-(* Use received values *)
+(* Read received values from the GVL *)
 myVelocity := GVL.targetVelocity_rpm;
 isAlive    := GVL.motorCommandWithinTimeout;
+
+(* Send a message *)
+DRIVE_STATUS_SEND(
+    channel          := ifmDevice.CAN_CHANNEL.CHAN_0,
+    actualVelocity_rpm := myVelocity,
+    motorTemp_degC     := tempSensor,
+    busVoltage_V       := voltage,
+    faultCode          := 0
+);
+```
+
+If your PLC project already uses a different GVL name, set `gvl_name` in the schema to match:
+
+```yaml
+plc:
+  can_channel: CHAN_0
+  gvl_name: PC_INTERFACE_OUT   # output file becomes PC_INTERFACE_OUT.st
 ```
 
 **C++ side (low-level)** -- parse incoming frames, build outgoing ones:
@@ -173,6 +190,7 @@ can.process_frames();
 |----------|----------|-------------|
 | `version` | yes | Schema version, currently `"1"` |
 | `plc.can_channel` | yes | ifm `CAN_CHANNEL` enum value (e.g. `CHAN_0`) |
+| `plc.gvl_name` | no | Name of the generated Global Variable List (default `GVL`). Controls the output filename and the qualifier prefix in RECV function blocks. |
 | `enums` | no | List of enum definitions |
 | `messages` | yes | List of message definitions |
 
@@ -250,7 +268,7 @@ For each schema, the following files are generated in the PLC output directory:
 |------|---------|
 | `CAN_EXTRACT_BITS.st` | Helper: extract N bits from a byte array at a bit offset |
 | `CAN_INSERT_BITS.st` | Helper: insert N bits into a byte array at a bit offset |
-| `GVL.st` | Global Variable List for received message fields + timeout booleans |
+| `{gvl_name}.st` | Global Variable List for received message fields + timeout booleans (default `GVL.st`) |
 | `main_input.st` | Calls all RECV function blocks with the configured CAN channel |
 | `{MESSAGE}_RECV.st` | One per `pc_to_plc` message -- receives, unpacks, tracks timeout |
 | `{MESSAGE}_SEND.st` | One per `plc_to_pc` message -- packs and transmits |
