@@ -18,7 +18,7 @@ EXPECTED_PLC_FILES = [
     "MOTOR_COMMAND_RECV.st",
     "PC_STATE_RECV.st",
     "DRIVE_STATUS_SEND.st",
-    "GVL.st",
+    "GVL.gvl.st",
     "main_input.st",
 ]
 

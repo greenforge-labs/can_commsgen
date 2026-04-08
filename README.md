@@ -268,7 +268,7 @@ For each schema, the following files are generated in the PLC output directory:
 |------|---------|
 | `CAN_EXTRACT_BITS.st` | Helper: extract N bits from a byte array at a bit offset |
 | `CAN_INSERT_BITS.st` | Helper: insert N bits into a byte array at a bit offset |
-| `{gvl_name}.st` | Global Variable List for received message fields + timeout booleans (default `GVL.st`) |
+| `{gvl_name}.gvl.st` | Global Variable List for received message fields + timeout booleans (default `GVL.gvl.st`) |
 | `main_input.st` | Calls all RECV function blocks with the configured CAN channel |
 | `{MESSAGE}_RECV.st` | One per `pc_to_plc` message -- receives, unpacks, tracks timeout |
 | `{MESSAGE}_SEND.st` | One per `plc_to_pc` message -- packs and transmits |

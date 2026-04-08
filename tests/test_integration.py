@@ -20,7 +20,7 @@ GOLDEN_PLC_FILES = [
     "CAN_INSERT_BITS.st",
     "DriveMode.st",
     "DRIVE_STATUS_SEND.st",
-    "GVL.st",
+    "GVL.gvl.st",
     "main_input.st",
     "MOTOR_COMMAND_RECV.st",
     "PC_STATE_RECV.st",

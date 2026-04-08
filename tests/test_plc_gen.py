@@ -83,12 +83,12 @@ def test_gvl_generation(
     golden_plc_dir: Path,
     tmp_path: Path,
 ) -> None:
-    """Generated GVL.st matches the golden file."""
+    """Generated GVL.gvl.st matches the golden file."""
     schema = load_schema([example_schema_path])
     generate_plc(schema, tmp_path)
 
-    generated = (tmp_path / "GVL.st").read_text()
-    expected = (golden_plc_dir / "GVL.st").read_text()
+    generated = (tmp_path / "GVL.gvl.st").read_text()
+    expected = (golden_plc_dir / "GVL.gvl.st").read_text()
     assert generated == expected
 
 
@@ -138,8 +138,8 @@ def test_custom_gvl_name(
     generate_plc(schema, out)
 
     # GVL file should use custom name
-    assert (out / "CUSTOM_GVL.st").exists()
-    assert not (out / "GVL.st").exists()
+    assert (out / "CUSTOM_GVL.gvl.st").exists()
+    assert not (out / "GVL.gvl.st").exists()
 
     # RECV FBs should reference CUSTOM_GVL
     recv_text = (out / "MOTOR_COMMAND_RECV.st").read_text()
