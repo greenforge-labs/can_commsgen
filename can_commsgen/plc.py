@@ -122,7 +122,7 @@ def _generate_gvl(schema: Schema, output_dir: Path, env: jinja2.Environment) -> 
             var["name_padded"] = var["name"].ljust(max_name_len)  # type: ignore[index]
 
     rendered = template.render(messages=messages_data)
-    (output_dir / "GVL.st").write_text(rendered)
+    (output_dir / f"{schema.plc.gvl_name}.st").write_text(rendered)
 
 
 def _send_plc_type(field: FieldDef, enum_names: set[str]) -> str:
@@ -181,7 +181,7 @@ def _generate_recv_fbs(schema: Schema, output_dir: Path, env: jinja2.Environment
         # Build field info for template
         fields_info: list[dict[str, str]] = []
         for f in msg.fields:
-            gvl_ref = f"GVL.{f.plc_var_name}"
+            gvl_ref = f"{schema.plc.gvl_name}.{f.plc_var_name}"
             expr = _recv_extract_expr(f, enum_names)
             fields_info.append({"gvl_ref": gvl_ref, "expr": expr})
 
@@ -201,6 +201,7 @@ def _generate_recv_fbs(schema: Schema, output_dir: Path, env: jinja2.Environment
             fields=fields_info,
             timeout_ms=msg.timeout_ms,
             timeout_var=timeout_var,
+            gvl_name=schema.plc.gvl_name,
         )
 
         (output_dir / f"{name}.st").write_text(rendered)

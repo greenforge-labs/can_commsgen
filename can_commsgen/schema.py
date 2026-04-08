@@ -103,6 +103,7 @@ class PlcConfig:
     """PLC configuration from the schema."""
 
     can_channel: str
+    gvl_name: str = "GVL"
 
 
 @dataclass
@@ -532,7 +533,10 @@ def load_schema(paths: list[Path]) -> Schema:
 
         # Merge plc config
         if merged_plc is None:
-            merged_plc = PlcConfig(can_channel=raw["plc"]["can_channel"])
+            merged_plc = PlcConfig(
+                can_channel=raw["plc"]["can_channel"],
+                gvl_name=raw["plc"].get("gvl_name", "GVL"),
+            )
 
         # Merge enums
         for enum_raw in raw.get("enums", []):

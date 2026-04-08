@@ -25,5 +25,5 @@ END_IF
 {% if timeout_ms is not none %}
 
 timer(IN := TRUE, PT := T#{{ timeout_ms }}ms);
-GVL.{{ timeout_var }} := NOT timer.Q;
+{{ gvl_name }}.{{ timeout_var }} := NOT timer.Q;
 {% endif %}

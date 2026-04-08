@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import yaml
+
 from can_commsgen.plc import generate_plc
 from can_commsgen.schema import load_schema
 
@@ -116,3 +118,35 @@ def test_main_input_generation(
     generated = (tmp_path / "main_input.st").read_text()
     expected = (golden_plc_dir / "main_input.st").read_text()
     assert generated == expected
+
+
+def test_custom_gvl_name(
+    example_schema_path: Path,
+    tmp_path: Path,
+) -> None:
+    """Custom gvl_name controls output filename and GVL references."""
+    # Create a schema with custom gvl_name
+    with open(example_schema_path) as f:
+        raw = yaml.safe_load(f)
+    raw["plc"]["gvl_name"] = "CUSTOM_GVL"
+    custom_yaml = tmp_path / "custom.yaml"
+    with open(custom_yaml, "w") as f:
+        yaml.dump(raw, f)
+
+    schema = load_schema([custom_yaml])
+    out = tmp_path / "out"
+    generate_plc(schema, out)
+
+    # GVL file should use custom name
+    assert (out / "CUSTOM_GVL.st").exists()
+    assert not (out / "GVL.st").exists()
+
+    # RECV FBs should reference CUSTOM_GVL
+    recv_text = (out / "MOTOR_COMMAND_RECV.st").read_text()
+    assert "CUSTOM_GVL.targetVelocity_rpm" in recv_text
+    assert "CUSTOM_GVL.torqueLimit_Nm" in recv_text
+    assert "CUSTOM_GVL.motorCommandWithinTimeout" in recv_text
+
+    pc_state_text = (out / "PC_STATE_RECV.st").read_text()
+    assert "CUSTOM_GVL.driveMode" in pc_state_text
+    assert "CUSTOM_GVL.pcStateWithinTimeout" in pc_state_text

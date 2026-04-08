@@ -28,6 +28,11 @@
                 "can_channel": {
                     "type": "string",
                     "description": "ifm CAN_CHANNEL enum value (e.g. CHAN_0, CHAN_1)."
+                },
+                "gvl_name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                    "description": "Name of the generated Global Variable List. Defaults to 'GVL'. Controls both the output filename and the qualifier prefix used in RECV function blocks."
                 }
             }
         },
