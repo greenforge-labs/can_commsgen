@@ -15,6 +15,8 @@ VAR
     raw     : ULINT;
 END_VAR
 
+// --- BEGIN IMPLEMENTATION ---
+
 raw := LINT_TO_ULINT(value);
 FOR i := 0 TO bitCount - 1 DO
     byteIdx := (bitOffset + i) / 8;

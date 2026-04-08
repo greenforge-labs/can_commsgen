@@ -19,6 +19,7 @@ GOLDEN_PLC_FILES = [
     "CAN_EXTRACT_BITS.st",
     "CAN_INSERT_BITS.st",
     "DriveMode.st",
+    "DriveMode_FROM_INT.st",
     "DRIVE_STATUS_SEND.st",
     "GVL.gvl.st",
     "main_input.st",

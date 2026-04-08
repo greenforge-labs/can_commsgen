@@ -9,11 +9,13 @@ VAR
     rxData : ARRAY[0..7] OF USINT;
 END_VAR
 
+// --- BEGIN IMPLEMENTATION ---
+
 rx(xEnable := TRUE, eChannel := channel, xExtended := TRUE, udiID := 16#00000300);
 
 IF rx.uiAvailable > 0 AND rx.usiDLC = 1 THEN
     rxData := rx.aData;
-    GVL.driveMode := TO_DriveMode(CAN_EXTRACT_BITS(rxData, 0, 2, FALSE));
+    GVL.driveMode := DriveMode_FROM_INT(TO_USINT(CAN_EXTRACT_BITS(rxData, 0, 2, FALSE)));
     timer(IN := FALSE);
 END_IF
 

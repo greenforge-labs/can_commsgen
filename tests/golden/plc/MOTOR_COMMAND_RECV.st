@@ -9,6 +9,8 @@ VAR
     rxData : ARRAY[0..7] OF USINT;
 END_VAR
 
+// --- BEGIN IMPLEMENTATION ---
+
 rx(xEnable := TRUE, eChannel := channel, xExtended := TRUE, udiID := 16#00000100);
 
 IF rx.uiAvailable > 0 AND rx.usiDLC = 4 THEN

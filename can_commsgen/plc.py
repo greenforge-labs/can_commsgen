@@ -8,6 +8,7 @@ import jinja2
 
 from can_commsgen.schema import (
     ENDPOINT_TYPES,
+    EnumDef,
     FieldDef,
     Schema,
     _snake_to_camel,
@@ -31,7 +32,7 @@ def generate_plc(schema: Schema, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     env = _template_env()
 
-    # Enum files
+    # Enum files and conversion functions
     _generate_enums(schema, output_dir, env)
 
     # Bit helper functions (static content)
@@ -59,13 +60,24 @@ def _generate_bit_helpers(output_dir: Path, env: jinja2.Environment) -> None:
     (output_dir / "CAN_INSERT_BITS.st").write_text(insert_template.render())
 
 
+def _enum_from_int_fn_name(enum_name: str) -> str:
+    """Return the name of the integer-to-enum conversion function."""
+    return f"{enum_name}_FROM_INT"
+
+
 def _generate_enums(schema: Schema, output_dir: Path, env: jinja2.Environment) -> None:
-    """Generate one .st file per enum definition."""
-    template = env.get_template("enum.st.j2")
+    """Generate one .st file per enum definition, plus a conversion function."""
+    enum_template = env.get_template("enum.st.j2")
+    conv_template = env.get_template("enum_from_int.st.j2")
     for enum in schema.enums:
         max_name_len = max(len(name) for name in enum.values)
-        rendered = template.render(enum=enum, max_name_len=max_name_len)
+        rendered = enum_template.render(enum=enum, max_name_len=max_name_len)
         (output_dir / f"{enum.name}.st").write_text(rendered)
+
+        first_value = next(iter(enum.values))
+        fn_name = _enum_from_int_fn_name(enum.name)
+        rendered = conv_template.render(enum=enum, fn_name=fn_name, first_value=first_value)
+        (output_dir / f"{fn_name}.st").write_text(rendered)
 
 
 def _gvl_plc_type(field: FieldDef, enum_names: set[str]) -> str:
@@ -152,7 +164,7 @@ def _send_insert_expr(field: FieldDef) -> str:
         return f"TO_LINT({var})"
 
 
-def _recv_extract_expr(field: FieldDef, enum_names: set[str]) -> str:
+def _recv_extract_expr(field: FieldDef, enum_map: dict[str, "EnumDef"]) -> str:
     """Build the PLC extraction expression for a RECV FB field."""
     signed = "TRUE" if field.wire_signed else "FALSE"
     extract = f"CAN_EXTRACT_BITS(rxData, {field.bit_offset}, " f"{field.wire_bits}, {signed})"
@@ -161,8 +173,10 @@ def _recv_extract_expr(field: FieldDef, enum_names: set[str]) -> str:
         return f"TO_REAL({extract}) * {field.resolution:g}"
     elif field.type == "bool":
         return f"{extract} <> 0"
-    elif field.type in enum_names:
-        return f"TO_{field.type}({extract})"
+    elif field.type in enum_map:
+        fn = _enum_from_int_fn_name(field.type)
+        backing_plc = enum_map[field.type].backing_type_plc
+        return f"{fn}(TO_{backing_plc}({extract}))"
     else:
         # Integer type — cast to PLC type
         plc_type = ENDPOINT_TYPES[field.type][0]
@@ -172,7 +186,7 @@ def _recv_extract_expr(field: FieldDef, enum_names: set[str]) -> str:
 def _generate_recv_fbs(schema: Schema, output_dir: Path, env: jinja2.Environment) -> None:
     """Generate RECV function block files for pc_to_plc messages."""
     template = env.get_template("recv_fb.st.j2")
-    enum_names = {e.name for e in schema.enums}
+    enum_map = {e.name: e for e in schema.enums}
 
     for msg in schema.messages:
         if msg.direction != "pc_to_plc":
@@ -182,7 +196,7 @@ def _generate_recv_fbs(schema: Schema, output_dir: Path, env: jinja2.Environment
         fields_info: list[dict[str, str]] = []
         for f in msg.fields:
             gvl_ref = f"{schema.plc.gvl_name}.{f.plc_var_name}"
-            expr = _recv_extract_expr(f, enum_names)
+            expr = _recv_extract_expr(f, enum_map)
             fields_info.append({"gvl_ref": gvl_ref, "expr": expr})
 
         max_gvl_len = max(len(fi["gvl_ref"]) for fi in fields_info) if fields_info else 0

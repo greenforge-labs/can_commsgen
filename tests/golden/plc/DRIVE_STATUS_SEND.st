@@ -9,10 +9,11 @@ VAR_INPUT
 END_VAR
 VAR
     tx   : ifmRCAN.CAN_Tx;
-    data : ARRAY[0..7] OF USINT;
+    data : ARRAY[0..7] OF USINT := [0, 0, 0, 0, 0, 0, 0, 0];
 END_VAR
 
-data := [8(0)];
+// --- BEGIN IMPLEMENTATION ---
+
 CAN_INSERT_BITS(TO_LINT(REAL_TO_INT(actualVelocity_rpm / 0.1)),  0,  16, data);
 CAN_INSERT_BITS(TO_LINT(REAL_TO_INT(motorTemp_degC / 0.1)),       16, 12, data);
 CAN_INSERT_BITS(TO_LINT(REAL_TO_UINT(busVoltage_V / 0.1)),        28, 10, data);

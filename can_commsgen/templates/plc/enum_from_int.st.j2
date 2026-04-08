@@ -1,0 +1,15 @@
+(* THIS FILE IS AUTO-GENERATED. DO NOT EDIT. *)
+FUNCTION {{ fn_name }} : {{ enum.name }}
+VAR_INPUT
+    value : {{ enum.backing_type_plc }};
+END_VAR
+
+// --- BEGIN IMPLEMENTATION ---
+
+CASE value OF
+{% for name, val in enum.values.items() %}
+    {{ val }}: {{ fn_name }} := {{ enum.name }}.{{ name }};
+{% endfor %}
+ELSE
+    {{ fn_name }} := {{ enum.name }}.{{ first_value }};
+END_CASE
