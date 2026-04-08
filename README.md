@@ -335,24 +335,22 @@ drive_status  (0x00000200, plc_to_pc)
 ```bash
 git clone <repo-url>
 cd can_commsgen
+python -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
+pre-commit install
 ```
 
-Or with Nix (provides Python, pixi, CMake, GCC):
-
-```bash
-nix develop    # or use direnv with: direnv allow
-pixi install
-```
+Requires **Python 3.11+**.
 
 ### Quality Gates
 
 Run in this order:
 
 ```bash
-pixi run ruff check can_commsgen/ tests/    # Lint
-pixi run pyright can_commsgen/              # Type check
-pixi run pytest tests/                      # Tests (Python + C++ roundtrip)
+pre-commit run --all-files            # Formatting & linting
+pyright can_commsgen/                 # Type check
+pytest tests/                         # Tests (Python + C++ roundtrip)
 ```
 
 ### Tests
