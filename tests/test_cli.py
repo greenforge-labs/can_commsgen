@@ -19,7 +19,7 @@ EXPECTED_PLC_FILES = [
     "PC_STATE_RECV.st",
     "DRIVE_STATUS_SEND.st",
     "GVL.gvl.st",
-    "main_input.st",
+    "CAN_RECV.st",
 ]
 
 

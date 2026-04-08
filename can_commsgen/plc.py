@@ -47,7 +47,7 @@ def generate_plc(schema: Schema, output_dir: Path) -> None:
     # Global Variable List (pc_to_plc fields + timeout booleans)
     _generate_gvl(schema, output_dir, env)
 
-    # main_input.st — calls all RECV FBs
+    # CAN_RECV.st — PROGRAM that calls all RECV FBs
     _generate_main_input(schema, output_dir, env)
 
 
@@ -288,15 +288,17 @@ def _generate_send_fbs(schema: Schema, output_dir: Path, env: jinja2.Environment
 
 
 def _generate_main_input(schema: Schema, output_dir: Path, env: jinja2.Environment) -> None:
-    """Generate main_input.st calling all RECV FBs."""
+    """Generate CAN_RECV.st — PROGRAM that calls all RECV FBs."""
     template = env.get_template("main_input.st.j2")
 
+    names = [fb_name(msg.name, msg.direction) for msg in schema.messages if msg.direction == "pc_to_plc"]
+    max_len = max((len(f"fb{n}") for n in names), default=0)
     recv_fbs = [
-        {"fb_name": fb_name(msg.name, msg.direction)} for msg in schema.messages if msg.direction == "pc_to_plc"
+        {"fb_name": n, "inst_padded": f"fb{n}".ljust(max_len)} for n in names
     ]
 
     rendered = template.render(
         recv_fbs=recv_fbs,
         can_channel=schema.plc.can_channel,
     )
-    (output_dir / "main_input.st").write_text(rendered)
+    (output_dir / "CAN_RECV.st").write_text(rendered)

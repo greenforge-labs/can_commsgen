@@ -119,8 +119,8 @@ def test_main_input_generation(
     schema = load_schema([example_schema_path])
     generate_plc(schema, tmp_path)
 
-    generated = (tmp_path / "main_input.st").read_text()
-    expected = (golden_plc_dir / "main_input.st").read_text()
+    generated = (tmp_path / "CAN_RECV.st").read_text()
+    expected = (golden_plc_dir / "CAN_RECV.st").read_text()
     assert generated == expected
 
 
@@ -253,6 +253,7 @@ def test_templates_have_begin_implementation_comment(
         "DRIVE_STATUS_SEND.st",
         "PC_STATE_RECV.st",
         "DriveMode_FROM_INT.st",
+        "CAN_RECV.st",
     ]
     for fname in files_with_impl_comment:
         content = (tmp_path / fname).read_text()

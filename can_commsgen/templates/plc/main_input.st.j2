@@ -1,4 +1,14 @@
 (* THIS FILE IS AUTO-GENERATED. DO NOT EDIT. *)
+PROGRAM CAN_RECV
+VAR
 {% for recv in recv_fbs %}
-{{ recv.fb_name }}(channel := ifmDevice.CAN_CHANNEL.{{ can_channel }});
+    {{ recv.inst_padded }} : {{ recv.fb_name }};
 {% endfor %}
+END_VAR
+
+// --- BEGIN IMPLEMENTATION ---
+
+{% for recv in recv_fbs %}
+fb{{ recv.fb_name }}(channel := ifmDevice.CAN_CHANNEL.{{ can_channel }});
+{% endfor %}
+
