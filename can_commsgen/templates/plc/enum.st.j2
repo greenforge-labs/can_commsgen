@@ -1,0 +1,9 @@
+(* THIS FILE IS AUTO-GENERATED. DO NOT EDIT. *)
+{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE {{ enum.name }} : (
+{% for name, value in enum.values.items() %}
+    {{ name.ljust(max_name_len) }} := {{ value }}{{ "," if not loop.last else "" }}
+{% endfor %}
+) {{ enum.backing_type_plc }};
+END_TYPE

@@ -1,0 +1,29 @@
+(* THIS FILE IS AUTO-GENERATED. DO NOT EDIT. *)
+FUNCTION_BLOCK {{ fb_name }}
+VAR_INPUT
+    channel : ifmDevice.CAN_CHANNEL;
+END_VAR
+VAR
+    rx     : ifmRCAN.CAN_Rx;
+{% if timeout_ms is not none %}
+    timer  : TON;
+{% endif %}
+    rxData : ARRAY[0..7] OF USINT;
+END_VAR
+
+rx(xEnable := TRUE, eChannel := channel, xExtended := TRUE, udiID := 16#{{ can_id }});
+
+IF rx.uiAvailable > 0 AND rx.usiDLC = {{ dlc }} THEN
+    rxData := rx.aData;
+{% for f in fields %}
+    {{ f.gvl_padded }} := {{ f.expr }};
+{% endfor %}
+{% if timeout_ms is not none %}
+    timer(IN := FALSE);
+{% endif %}
+END_IF
+{% if timeout_ms is not none %}
+
+timer(IN := TRUE, PT := T#{{ timeout_ms }}ms);
+GVL.{{ timeout_var }} := NOT timer.Q;
+{% endif %}

@@ -1,0 +1,151 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/greenforge-labs/can_commsgen/main/schema.json",
+    "title": "can_commsgen schema",
+    "description": "CAN YAML schema for PLC Structured Text and C++ code generation.",
+    "type": "object",
+    "required": [
+        "version",
+        "plc",
+        "messages"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "version": {
+            "type": "string",
+            "enum": [
+                "1"
+            ],
+            "description": "Schema version. Currently only '1' is supported."
+        },
+        "plc": {
+            "type": "object",
+            "required": [
+                "can_channel"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "can_channel": {
+                    "type": "string",
+                    "description": "ifm CAN_CHANNEL enum value (e.g. CHAN_0, CHAN_1)."
+                }
+            }
+        },
+        "enums": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/enum_def"
+            }
+        },
+        "messages": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "$ref": "#/$defs/message_def"
+            }
+        }
+    },
+    "$defs": {
+        "enum_def": {
+            "type": "object",
+            "required": [
+                "name",
+                "values"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Enum type name (PascalCase)."
+                },
+                "values": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "additionalProperties": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "description": "Mapping of enum member names to integer values."
+                }
+            }
+        },
+        "message_def": {
+            "type": "object",
+            "required": [
+                "name",
+                "id",
+                "direction",
+                "fields"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Message name in snake_case."
+                },
+                "id": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 536870911,
+                    "description": "29-bit extended CAN ID."
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": [
+                        "pc_to_plc",
+                        "plc_to_pc"
+                    ],
+                    "description": "Direction from the PC's perspective."
+                },
+                "timeout_ms": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Optional receive timeout in milliseconds."
+                },
+                "fields": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/$defs/field_def"
+                    }
+                }
+            }
+        },
+        "field_def": {
+            "type": "object",
+            "required": [
+                "name",
+                "type"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Field name in snake_case."
+                },
+                "type": {
+                    "type": "string",
+                    "description":
+                        "Endpoint type: bool, uint8, int8, uint16, int16, uint32, int32, uint64, int64, real, or an enum name."
+                },
+                "min": {
+                    "type": "number",
+                    "description": "Minimum physical value (inclusive)."
+                },
+                "max": {
+                    "type": "number",
+                    "description": "Maximum physical value (inclusive)."
+                },
+                "resolution": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Physical value per LSB. Only valid on real fields."
+                },
+                "unit": {
+                    "type": "string",
+                    "description": "Unit suffix for generated variable names."
+                }
+            }
+        }
+    }
+}
