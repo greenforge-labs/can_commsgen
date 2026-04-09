@@ -83,6 +83,44 @@ def test_cli_no_report(tmp_path: Path) -> None:
     assert (cpp_dir / "can_interface.cpp").exists()
 
 
+def test_cli_multiple_output_dirs(tmp_path: Path) -> None:
+    """CLI writes to multiple --out-plc and --out-cpp directories."""
+    plc_dir_a = tmp_path / "plc_a"
+    plc_dir_b = tmp_path / "plc_b"
+    cpp_dir_a = tmp_path / "cpp_a"
+    cpp_dir_b = tmp_path / "cpp_b"
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "--schema",
+            str(EXAMPLE_SCHEMA),
+            "--out-plc",
+            str(plc_dir_a),
+            "--out-plc",
+            str(plc_dir_b),
+            "--out-cpp",
+            str(cpp_dir_a),
+            "--out-cpp",
+            str(cpp_dir_b),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    # Both PLC directories should have the same files
+    for plc_dir in (plc_dir_a, plc_dir_b):
+        for fname in EXPECTED_PLC_FILES:
+            assert (plc_dir / fname).exists(), f"Missing PLC file: {fname} in {plc_dir}"
+
+    # Both C++ directories should have the same files
+    for cpp_dir in (cpp_dir_a, cpp_dir_b):
+        assert (cpp_dir / "can_messages.hpp").exists(), f"Missing in {cpp_dir}"
+        assert (cpp_dir / "can_interface.hpp").exists(), f"Missing in {cpp_dir}"
+        assert (cpp_dir / "can_interface.cpp").exists(), f"Missing in {cpp_dir}"
+
+
 def test_cli_invalid_schema(tmp_path: Path) -> None:
     """CLI exits 1 with error on stderr for invalid schema."""
     bad_schema = tmp_path / "bad.yaml"

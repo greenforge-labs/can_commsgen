@@ -24,15 +24,19 @@ from can_commsgen.schema import load_schema
 )
 @click.option(
     "--out-plc",
+    "out_plc_paths",
     required=True,
+    multiple=True,
     type=click.Path(path_type=Path),
-    help="Output directory for PLC Structured Text files.",
+    help="Output directory for PLC Structured Text files (repeatable).",
 )
 @click.option(
     "--out-cpp",
+    "out_cpp_paths",
     required=True,
+    multiple=True,
     type=click.Path(path_type=Path),
-    help="Output directory for C++ header.",
+    help="Output directory for C++ header (repeatable).",
 )
 @click.option(
     "--out-report",
@@ -42,8 +46,8 @@ from can_commsgen.schema import load_schema
 )
 def main(
     schema_paths: tuple[Path, ...],
-    out_plc: Path,
-    out_cpp: Path,
+    out_plc_paths: tuple[Path, ...],
+    out_cpp_paths: tuple[Path, ...],
     out_report: Path | None,
 ) -> None:
     """Generate PLC Structured Text and C++ code from CAN YAML schemas."""
@@ -53,11 +57,13 @@ def main(
         click.echo(str(exc), err=True)
         sys.exit(1)
 
-    out_plc.mkdir(parents=True, exist_ok=True)
-    out_cpp.mkdir(parents=True, exist_ok=True)
+    for out_plc in out_plc_paths:
+        out_plc.mkdir(parents=True, exist_ok=True)
+        generate_plc(schema, out_plc)
 
-    generate_plc(schema, out_plc)
-    generate_cpp(schema, out_cpp)
+    for out_cpp in out_cpp_paths:
+        out_cpp.mkdir(parents=True, exist_ok=True)
+        generate_cpp(schema, out_cpp)
 
     if out_report is not None:
         out_report.parent.mkdir(parents=True, exist_ok=True)

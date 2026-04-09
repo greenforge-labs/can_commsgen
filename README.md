@@ -109,7 +109,7 @@ can_commsgen \
   --out-report generated/packing_report.txt
 ```
 
-`--schema` is repeatable to merge multiple files. `--out-report` is optional.
+`--schema`, `--out-plc`, and `--out-cpp` are all repeatable. Use multiple `--out-plc` / `--out-cpp` flags to write identical output to several directories (e.g. one for your build tree and one for version control). `--out-report` is optional.
 
 ### Use the Generated Code
 
