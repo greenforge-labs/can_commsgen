@@ -140,20 +140,27 @@ plc:
   gvl_name: PC_INTERFACE_OUT   # output file becomes PC_INTERFACE_OUT.st
 ```
 
+To use a custom C++ namespace, set `cpp.namespace` in the schema:
+
+```yaml
+cpp:
+  namespace: my_project::can   # default is plc_can
+```
+
 **C++ side (low-level)** -- parse incoming frames, build outgoing ones:
 
 ```cpp
 #include "can_messages.hpp"
 
 // Parse a received frame
-auto msg = project_can::parse_drive_status(frame);
+auto msg = plc_can::parse_drive_status(frame);
 if (msg) {
     std::cout << msg->actual_velocity_rpm << " rpm\n";
     std::cout << msg->motor_temp_degC << " degC\n";
 }
 
 // Build a frame to send
-auto frame = project_can::build_motor_command({
+auto frame = plc_can::build_motor_command({
     .target_velocity_rpm = 1500.0,
     .torque_limit_Nm = 25.0
 });
@@ -164,15 +171,15 @@ auto frame = project_can::build_motor_command({
 ```cpp
 #include "can_interface.hpp"
 
-project_can::CanInterface can("can0", {
-    .on_drive_status = [](project_can::DriveStatus status) {
+plc_can::CanInterface can("can0", {
+    .on_drive_status = [](plc_can::DriveStatus status) {
         std::cout << status.actual_velocity_rpm << " rpm, "
                   << status.motor_temp_degC << " degC\n";
     }
 });
 
 // Send a message (type-safe overloads)
-can.send(project_can::MotorCommand{
+can.send(plc_can::MotorCommand{
     .target_velocity_rpm = 1500.0,
     .torque_limit_Nm = 25.0
 });
@@ -191,6 +198,7 @@ can.process_frames();
 | `version` | yes | Schema version, currently `"1"` |
 | `plc.can_channel` | yes | ifm `CAN_CHANNEL` enum value (e.g. `CHAN_0`) |
 | `plc.gvl_name` | no | Name of the generated Global Variable List (default `GVL`). Controls the output filename and the qualifier prefix in RECV function blocks. |
+| `cpp.namespace` | no | C++ namespace for generated code (default `plc_can`). Supports nested namespaces (e.g. `my_project::can`). |
 | `enums` | no | List of enum definitions |
 | `messages` | yes | List of message definitions |
 
@@ -280,7 +288,7 @@ RECV function blocks use ifm's `ifmRCAN.CAN_Rx` and write unpacked values into t
 
 ### C++ Files
 
-Three files are generated in the C++ output directory, all under the `project_can` namespace:
+Three files are generated in the C++ output directory, all under the `plc_can` namespace (configurable via `cpp.namespace`):
 
 | File | Purpose |
 |------|---------|

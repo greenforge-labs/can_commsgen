@@ -54,6 +54,79 @@ def test_can_interface_cpp_generation(
     assert generated == expected
 
 
+def test_default_namespace_in_generated_code(
+    example_schema_path: Path,
+    tmp_path: Path,
+) -> None:
+    """Generated code uses 'plc_can' namespace when no cpp config is set."""
+    schema = load_schema([example_schema_path])
+    generate_cpp(schema, tmp_path)
+
+    for filename in ("can_messages.hpp", "can_interface.hpp", "can_interface.cpp"):
+        content = (tmp_path / filename).read_text()
+        assert "namespace plc_can {" in content
+        assert "} // namespace plc_can" in content
+
+
+def test_custom_namespace_in_generated_code(tmp_path: Path) -> None:
+    """Generated code uses the custom namespace from cpp config."""
+    schema_file = tmp_path / "schema.yaml"
+    schema_file.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_0\n"
+        "cpp:\n  namespace: anvil_can\n"
+        "messages:\n"
+        "  - name: test_msg\n"
+        "    id: 0x100\n"
+        "    direction: pc_to_plc\n"
+        "    timeout_ms: 500\n"
+        "    fields:\n"
+        "      - name: value\n"
+        "        type: uint8\n"
+        "  - name: status\n"
+        "    id: 0x200\n"
+        "    direction: plc_to_pc\n"
+        "    fields:\n"
+        "      - name: ok\n"
+        "        type: bool\n"
+    )
+
+    schema = load_schema([schema_file])
+    out_dir = tmp_path / "generated"
+    generate_cpp(schema, out_dir)
+
+    for filename in ("can_messages.hpp", "can_interface.hpp", "can_interface.cpp"):
+        content = (out_dir / filename).read_text()
+        assert "namespace anvil_can {" in content
+        assert "} // namespace anvil_can" in content
+        assert "project_can" not in content
+
+
+def test_nested_namespace_in_generated_code(tmp_path: Path) -> None:
+    """Generated code supports nested C++ namespaces."""
+    schema_file = tmp_path / "schema.yaml"
+    schema_file.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_0\n"
+        "cpp:\n  namespace: my_project::can\n"
+        "messages:\n"
+        "  - name: test_msg\n"
+        "    id: 0x100\n"
+        "    direction: pc_to_plc\n"
+        "    fields:\n"
+        "      - name: value\n"
+        "        type: uint8\n"
+    )
+
+    schema = load_schema([schema_file])
+    out_dir = tmp_path / "generated"
+    generate_cpp(schema, out_dir)
+
+    content = (out_dir / "can_messages.hpp").read_text()
+    assert "namespace my_project::can {" in content
+    assert "} // namespace my_project::can" in content
+
+
 @pytest.mark.skipif(
     shutil.which("cmake") is None or shutil.which("g++") is None,
     reason="C++ toolchain (cmake, g++) not available",

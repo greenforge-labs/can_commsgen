@@ -57,7 +57,7 @@ static int tests_passed = 0;
         PASS(label);                                                                                                   \
     } while (0)
 
-using namespace project_can;
+using namespace plc_can;
 
 // Helper: default handlers with no callbacks set.
 static CanInterface::Handlers empty_handlers() { return {}; }

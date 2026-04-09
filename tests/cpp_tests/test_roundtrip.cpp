@@ -35,7 +35,7 @@ static int tests_passed = 0;
         tests_passed++;                                                                                                \
     } while (0)
 
-using namespace project_can;
+using namespace plc_can;
 
 // ---------------------------------------------------------------------------
 // motor_command roundtrip

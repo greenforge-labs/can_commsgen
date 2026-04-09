@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace project_can {
+namespace plc_can {
 
 class CanInterface {
   public:
@@ -40,4 +40,4 @@ class CanInterface {
     Handlers handlers_;
 };
 
-} // namespace project_can
+} // namespace plc_can

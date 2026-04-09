@@ -36,6 +36,17 @@
                 }
             }
         },
+        "cpp": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "namespace": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*(::[ A-Za-z_][A-Za-z0-9_]*)*$",
+                    "description": "C++ namespace for generated code. Defaults to 'plc_can'. Supports nested namespaces (e.g. 'my_project::can')."
+                }
+            }
+        },
         "enums": {
             "type": "array",
             "items": {

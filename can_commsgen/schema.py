@@ -107,6 +107,13 @@ class PlcConfig:
 
 
 @dataclass
+class CppConfig:
+    """C++ configuration from the schema."""
+
+    namespace: str = "plc_can"
+
+
+@dataclass
 class EnumDef:
     """An enum definition with derived wire properties."""
 
@@ -156,9 +163,10 @@ class MessageDef:
 
 @dataclass
 class Schema:
-    """Top-level schema containing PLC config, enums, and messages."""
+    """Top-level schema containing PLC config, C++ config, enums, and messages."""
 
     plc: PlcConfig
+    cpp: CppConfig = field(default_factory=CppConfig)
     enums: list[EnumDef] = field(default_factory=list)
     messages: list[MessageDef] = field(default_factory=list)
 
@@ -518,6 +526,7 @@ def load_schema(paths: list[Path]) -> Schema:
     json_schema = _load_json_schema()
 
     merged_plc: PlcConfig | None = None
+    merged_cpp: CppConfig | None = None
     merged_enums: list[EnumDef] = []
     merged_messages: list[MessageDef] = []
 
@@ -536,6 +545,12 @@ def load_schema(paths: list[Path]) -> Schema:
             merged_plc = PlcConfig(
                 can_channel=raw["plc"]["can_channel"],
                 gvl_name=raw["plc"].get("gvl_name", "GVL"),
+            )
+
+        # Merge cpp config
+        if merged_cpp is None and "cpp" in raw:
+            merged_cpp = CppConfig(
+                namespace=raw["cpp"].get("namespace", "plc_can"),
             )
 
         # Merge enums
@@ -568,4 +583,4 @@ def load_schema(paths: list[Path]) -> Schema:
             bit_offset += f.wire_bits
         msg.dlc = math.ceil(bit_offset / 8)
 
-    return Schema(plc=merged_plc, enums=merged_enums, messages=merged_messages)
+    return Schema(plc=merged_plc, cpp=merged_cpp or CppConfig(), enums=merged_enums, messages=merged_messages)

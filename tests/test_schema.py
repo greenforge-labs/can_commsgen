@@ -5,6 +5,7 @@ import jsonschema
 import pytest
 
 from can_commsgen.schema import (
+    CppConfig,
     FieldDef,
     PlcConfig,
     Schema,
@@ -887,3 +888,69 @@ def test_full_schema_integration(example_schema_path: Path) -> None:
     assert dmode.wire_max == 3
     assert dmode.plc_var_name == "driveMode"
     assert dmode.cpp_var_name == "drive_mode"
+
+
+# ── C++ config tests ─────────────────────────────────────────────────────
+
+
+def test_cpp_config_default_namespace(example_schema_path: Path) -> None:
+    """When no cpp section is present, namespace defaults to 'plc_can'."""
+    schema = load_schema([example_schema_path])
+    assert schema.cpp.namespace == "plc_can"
+
+
+def test_cpp_config_custom_namespace(tmp_path: Path) -> None:
+    """cpp.namespace from the schema is parsed correctly."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_0\n"
+        "cpp:\n  namespace: my_project_can\n"
+        "messages:\n"
+        "  - name: test_msg\n"
+        "    id: 0x100\n"
+        "    direction: pc_to_plc\n"
+        "    fields:\n"
+        "      - name: flag\n"
+        "        type: bool\n"
+    )
+    schema = load_schema([yaml_file])
+    assert schema.cpp.namespace == "my_project_can"
+
+
+def test_cpp_config_nested_namespace(tmp_path: Path) -> None:
+    """cpp.namespace supports nested C++ namespaces."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_0\n"
+        "cpp:\n  namespace: my_project::can\n"
+        "messages:\n"
+        "  - name: test_msg\n"
+        "    id: 0x100\n"
+        "    direction: pc_to_plc\n"
+        "    fields:\n"
+        "      - name: flag\n"
+        "        type: bool\n"
+    )
+    schema = load_schema([yaml_file])
+    assert schema.cpp.namespace == "my_project::can"
+
+
+def test_cpp_config_empty_section_uses_default(tmp_path: Path) -> None:
+    """An empty cpp section still gives the default namespace."""
+    yaml_file = tmp_path / "schema.yaml"
+    yaml_file.write_text(
+        'version: "1"\n'
+        "plc:\n  can_channel: CHAN_0\n"
+        "cpp: {}\n"
+        "messages:\n"
+        "  - name: test_msg\n"
+        "    id: 0x100\n"
+        "    direction: pc_to_plc\n"
+        "    fields:\n"
+        "      - name: flag\n"
+        "        type: bool\n"
+    )
+    schema = load_schema([yaml_file])
+    assert schema.cpp.namespace == "plc_can"

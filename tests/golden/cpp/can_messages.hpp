@@ -5,7 +5,7 @@
 #include <linux/can.h>
 #include <optional>
 
-namespace project_can {
+namespace plc_can {
 
 // -- Enums --------------------------------------------------------------------
 
@@ -147,4 +147,4 @@ inline can_frame build_pc_state(const PcState &msg) {
     return frame;
 }
 
-} // namespace project_can
+} // namespace plc_can

@@ -163,11 +163,14 @@ def generate_cpp(schema: Schema, output_dir: Path) -> None:
 
     enum_names = {e.name for e in schema.enums}
 
+    cpp_namespace = schema.cpp.namespace
+
     # --- can_messages.hpp ---
     enums = [_enum_data(e) for e in schema.enums]
     messages = [_message_data(m, enum_names) for m in schema.messages]
 
     rendered = env.get_template("can_messages.hpp.j2").render(
+        namespace=cpp_namespace,
         enums=enums,
         messages=messages,
     )
@@ -179,6 +182,7 @@ def generate_cpp(schema: Schema, output_dir: Path) -> None:
     timeout_msgs = [m for m in plc_to_pc if m["timeout_ms"] is not None]
 
     interface_ctx = {
+        "namespace": cpp_namespace,
         "plc_to_pc_messages": plc_to_pc,
         "pc_to_plc_messages": pc_to_plc,
         "timeout_messages": timeout_msgs,

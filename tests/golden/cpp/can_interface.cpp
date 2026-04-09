@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-namespace project_can {
+namespace plc_can {
 
 CanInterface::CanInterface(std::string can_device, Handlers handlers) : handlers_(std::move(handlers)) {
     socket_fd_ = socket(PF_CAN, SOCK_RAW | SOCK_NONBLOCK, CAN_RAW);
@@ -140,4 +140,4 @@ void CanInterface::check_timeouts(std::chrono::steady_clock::time_point /*now*/)
     // No plc_to_pc messages with timeout_ms in this schema.
 }
 
-} // namespace project_can
+} // namespace plc_can
