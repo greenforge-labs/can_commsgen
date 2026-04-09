@@ -141,6 +141,7 @@ messages:
   - name: drive_status
     id: 0x00000200
     direction: plc_to_pc
+    timeout_ms: 200
     fields:
       - name: actual_velocity
         type: real

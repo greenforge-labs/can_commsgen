@@ -6,10 +6,12 @@
 #include "stub_state.h"
 
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <stdexcept>
+#include <thread>
 #include <utility>
 
 static int tests_run = 0;
@@ -452,6 +454,136 @@ void test_destructor_closes_socket() {
 }
 
 // ---------------------------------------------------------------------------
+// Timeout behaviour
+// ---------------------------------------------------------------------------
+void test_timeout_not_before_first_message() {
+    std::printf("test_timeout_not_before_first_message\n");
+    stub().reset();
+
+    int timeout_count = 0;
+    CanInterface::Handlers h{};
+    h.on_drive_status_timeout = [&]() { ++timeout_count; };
+
+    auto iface = CanInterface("vcan0", h);
+
+    // No message has ever arrived — timeout should NOT fire
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    iface.process_frames();
+
+    ASSERT_EQ(timeout_count, 0, "no timeout before first message");
+}
+
+void test_timeout_fires_after_message_stops() {
+    std::printf("test_timeout_fires_after_message_stops\n");
+    stub().reset();
+
+    int timeout_count = 0;
+    CanInterface::Handlers h{};
+    h.on_drive_status = [](DriveStatus) {};
+    h.on_drive_status_timeout = [&]() { ++timeout_count; };
+
+    auto iface = CanInterface("vcan0", h);
+
+    // Send one message to set last_received
+    DriveStatus tx{0.0, 0.0, 0.0, 0};
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    iface.process_frames();
+    ASSERT_EQ(timeout_count, 0, "no timeout immediately after message");
+
+    // Wait past the 200ms timeout
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+    // No new frames — should trigger timeout
+    iface.process_frames();
+    ASSERT_EQ(timeout_count, 1, "timeout fires after message stops");
+}
+
+void test_timeout_fires_repeatedly() {
+    std::printf("test_timeout_fires_repeatedly\n");
+    stub().reset();
+
+    int timeout_count = 0;
+    CanInterface::Handlers h{};
+    h.on_drive_status = [](DriveStatus) {};
+    h.on_drive_status_timeout = [&]() { ++timeout_count; };
+
+    auto iface = CanInterface("vcan0", h);
+
+    // Send one message to set last_received
+    DriveStatus tx{0.0, 0.0, 0.0, 0};
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    iface.process_frames();
+
+    // Wait past timeout
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+    // Call process_frames multiple times — callback should fire each time
+    iface.process_frames();
+    ASSERT_EQ(timeout_count, 1, "timeout fires on first call");
+
+    iface.process_frames();
+    ASSERT_EQ(timeout_count, 2, "timeout fires on second call");
+
+    iface.process_frames();
+    ASSERT_EQ(timeout_count, 3, "timeout fires on third call");
+}
+
+void test_timeout_resets_on_new_message() {
+    std::printf("test_timeout_resets_on_new_message\n");
+    stub().reset();
+
+    int timeout_count = 0;
+    CanInterface::Handlers h{};
+    h.on_drive_status = [](DriveStatus) {};
+    h.on_drive_status_timeout = [&]() { ++timeout_count; };
+
+    auto iface = CanInterface("vcan0", h);
+
+    // Send one message
+    DriveStatus tx{0.0, 0.0, 0.0, 0};
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    iface.process_frames();
+
+    // Wait past timeout, fire it
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    iface.process_frames();
+    ASSERT_EQ(timeout_count, 1, "timeout fired");
+
+    // Now a new message arrives — resets the timer
+    stub().rx_queue.clear();
+    stub().rx_queue.push_back(build_drive_status(tx));
+    stub().rx_pos = 0;
+    iface.process_frames();
+
+    // Immediately after receiving — should NOT fire
+    iface.process_frames();
+    ASSERT_EQ(timeout_count, 1, "no timeout right after new message");
+
+    // Wait past timeout again — should fire again
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    iface.process_frames();
+    ASSERT_EQ(timeout_count, 2, "timeout fires again after second gap");
+}
+
+void test_timeout_handler_only_installs_filter() {
+    std::printf("test_timeout_handler_only_installs_filter\n");
+    stub().reset();
+
+    // Set only the timeout handler, not the message handler
+    CanInterface::Handlers h{};
+    h.on_drive_status_timeout = [&]() {};
+
+    auto iface = CanInterface("vcan0", h);
+
+    ASSERT_EQ(stub().installed_filters.size(), 1, "filter installed for timeout-only handler");
+    ASSERT_EQ(stub().installed_filters[0].can_id, 0x00000200 | CAN_EFF_FLAG,
+              "filter matches drive_status ID");
+}
+
+// ---------------------------------------------------------------------------
 int main() {
     test_construction_success();
     test_construction_socket_failure();
@@ -473,6 +605,12 @@ int main() {
 
     test_filters_installed_with_handler();
     test_no_filters_without_handlers();
+
+    test_timeout_not_before_first_message();
+    test_timeout_fires_after_message_stops();
+    test_timeout_fires_repeatedly();
+    test_timeout_resets_on_new_message();
+    test_timeout_handler_only_installs_filter();
 
     test_move_constructor();
     test_move_assignment();

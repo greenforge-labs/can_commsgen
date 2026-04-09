@@ -72,6 +72,7 @@ CanInterface &CanInterface::operator=(CanInterface &&other) noexcept {
 }
 
 void CanInterface::process_frames(size_t max_frames) {
+    auto now = std::chrono::steady_clock::now();
     for (size_t i = 0; i < max_frames; ++i) {
         can_frame frame{};
         auto n = read(socket_fd_, &frame, sizeof(frame));
@@ -99,14 +100,12 @@ void CanInterface::process_frames(size_t max_frames) {
             }
 {% if msg.timeout_ms is not none %}
             {{ msg.name }}_timeout_state_.last_received = now;
-            {{ msg.name }}_timeout_state_.timed_out = false;
 {% endif %}
             break;
 {% endfor %}
         }
     }
 
-    auto now = std::chrono::steady_clock::now();
     check_timeouts(now);
 }
 
@@ -149,8 +148,7 @@ void CanInterface::check_timeouts(std::chrono::steady_clock::time_point now) {
     if (handlers_.on_{{ msg.name }}_timeout &&
         {{ msg.name }}_timeout_state_.last_received.time_since_epoch().count() > 0) {
         auto elapsed = now - {{ msg.name }}_timeout_state_.last_received;
-        if (elapsed > {{ msg.name }}_timeout_state_.timeout && !{{ msg.name }}_timeout_state_.timed_out) {
-            {{ msg.name }}_timeout_state_.timed_out = true;
+        if (elapsed > {{ msg.name }}_timeout_state_.timeout) {
             handlers_.on_{{ msg.name }}_timeout();
         }
     }

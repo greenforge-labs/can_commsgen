@@ -67,6 +67,7 @@ messages:
   - name: drive_status
     id: 0x00000200
     direction: plc_to_pc
+    timeout_ms: 200
     fields:
       - name: actual_velocity
         type: real
@@ -175,6 +176,9 @@ plc_can::CanInterface can("can0", {
     .on_drive_status = [](plc_can::DriveStatus status) {
         std::cout << status.actual_velocity_rpm << " rpm, "
                   << status.motor_temp_degC << " degC\n";
+    },
+    .on_drive_status_timeout = []() {
+        std::cerr << "drive_status timeout!\n";
     }
 });
 
@@ -185,6 +189,10 @@ can.send(plc_can::MotorCommand{
 });
 
 // Process incoming frames (parses + dispatches to handlers)
+// Timeout callbacks are checked at the end of every process_frames() call --
+// if a message has not been received within its timeout_ms window, its
+// timeout handler is called on every process_frames() invocation until a
+// new message arrives.
 can.wait_readable();
 can.process_frames();
 ```
@@ -209,7 +217,7 @@ can.process_frames();
 | `name` | yes | `snake_case` identifier |
 | `id` | yes | 29-bit extended CAN ID (hex, e.g. `0x00000100`) |
 | `direction` | yes | `pc_to_plc` or `plc_to_pc` |
-| `timeout_ms` | no | Timeout supervision in milliseconds |
+| `timeout_ms` | no | Timeout supervision in milliseconds. On the PLC side, RECV function blocks set a GVL boolean when the message stops arriving. On the C++ side, the `on_<name>_timeout` handler is called on **every** `process_frames()` call while the message is in timeout. |
 | `fields` | yes | Ordered list of signal fields |
 
 **Direction** is defined from the PC's perspective: `pc_to_plc` means the PC sends and the PLC receives.
@@ -311,8 +319,9 @@ Parse and build functions are generated for every message regardless of directio
 - Constructor takes a SocketCAN device name (e.g. `"can0"`) and a `Handlers` struct with `std::function` callbacks for each `plc_to_pc` message
 - Type-safe `send()` overloads for each `pc_to_plc` message
 - `process_frames()` reads from the socket, parses frames, and dispatches to the appropriate handler
+- **Timeout supervision** for `plc_to_pc` messages with `timeout_ms` set: a separate `on_<name>_timeout` handler is called at the end of **every** `process_frames()` call while the message remains in timeout (i.e. not received within its `timeout_ms` window). The handler keeps firing on each call until a new message arrives, making it safe to use `process_frames()` as the sole driver for timeout-related logic without needing external timers.
 - `wait_readable()` blocks until data is available on the socket
-- Hardware CAN filters are auto-configured based on which handlers are set
+- Hardware CAN filters are auto-configured based on which handlers are set (including timeout-only handlers)
 - Move-only semantics (non-copyable)
 
 ### Packing Report
@@ -333,7 +342,7 @@ motor_command  (0x00000100, pc_to_plc, timeout 500ms)
 ================================================================================
 
 ================================================================================
-drive_status  (0x00000200, plc_to_pc)
+drive_status  (0x00000200, plc_to_pc, timeout 200ms)
   DLC: 6 bytes (46 bits used / 64 max)
 --------------------------------------------------------------------------------
   Bit offset  Bits  Signed  Field               Type   Wire range          Physical range          Resolution

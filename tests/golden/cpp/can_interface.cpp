@@ -72,6 +72,7 @@ CanInterface &CanInterface::operator=(CanInterface &&other) noexcept {
 }
 
 void CanInterface::process_frames(size_t max_frames) {
+    auto now = std::chrono::steady_clock::now();
     for (size_t i = 0; i < max_frames; ++i) {
         can_frame frame{};
         auto n = read(socket_fd_, &frame, sizeof(frame));
@@ -96,11 +97,11 @@ void CanInterface::process_frames(size_t max_frames) {
                 if (parsed)
                     handlers_.on_drive_status(*parsed);
             }
+            drive_status_timeout_state_.last_received = now;
             break;
         }
     }
 
-    auto now = std::chrono::steady_clock::now();
     check_timeouts(now);
 }
 
@@ -128,16 +129,23 @@ void CanInterface::send(const PcState &msg) {
 std::vector<can_filter> CanInterface::compute_filters() const {
     std::vector<can_filter> filters;
 
-    // drive_status (0x00000200, plc_to_pc)
-    if (handlers_.on_drive_status) {
+    // drive_status (0x00000200, plc_to_pc, timeout 200ms)
+    if (handlers_.on_drive_status || handlers_.on_drive_status_timeout) {
         filters.push_back({0x00000200 | CAN_EFF_FLAG, CAN_EFF_FLAG | CAN_EFF_MASK});
     }
 
     return filters;
 }
 
-void CanInterface::check_timeouts(std::chrono::steady_clock::time_point /*now*/) {
-    // No plc_to_pc messages with timeout_ms in this schema.
+void CanInterface::check_timeouts(std::chrono::steady_clock::time_point now) {
+    if (handlers_.on_drive_status_timeout &&
+        drive_status_timeout_state_.last_received.time_since_epoch().count() > 0) {
+        auto elapsed = now - drive_status_timeout_state_.last_received;
+        if (elapsed > drive_status_timeout_state_.timeout) {
+            handlers_.on_drive_status_timeout();
+        }
+    }
+
 }
 
 } // namespace plc_can

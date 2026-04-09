@@ -180,11 +180,11 @@ def test_load_schema_message_fields(example_schema_path: Path) -> None:
     assert torque.unit == "Nm"
 
 
-def test_load_schema_message_no_timeout(example_schema_path: Path) -> None:
-    """Messages without timeout_ms should have None."""
+def test_load_schema_message_timeout(example_schema_path: Path) -> None:
+    """Messages with timeout_ms should have the value set."""
     schema = load_schema([example_schema_path])
     drive_status = schema.messages[1]
-    assert drive_status.timeout_ms is None
+    assert drive_status.timeout_ms == 200
 
 
 def test_load_schema_field_optional_properties(example_schema_path: Path) -> None:
@@ -821,7 +821,7 @@ def test_full_schema_integration(example_schema_path: Path) -> None:
     assert ds.name == "drive_status"
     assert ds.id == 0x00000200
     assert ds.direction == "plc_to_pc"
-    assert ds.timeout_ms is None
+    assert ds.timeout_ms == 200
     assert ds.dlc == 6
     assert len(ds.fields) == 4
 

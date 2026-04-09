@@ -11,7 +11,7 @@ motor_command  (0x00000100, pc_to_plc, timeout 500ms)
 ================================================================================
 
 ================================================================================
-drive_status  (0x00000200, plc_to_pc)
+drive_status  (0x00000200, plc_to_pc, timeout 200ms)
   DLC: 6 bytes (46 bits used / 64 max)
 --------------------------------------------------------------------------------
   Bit offset  Bits  Signed  Field               Type   Wire range          Physical range          Resolution

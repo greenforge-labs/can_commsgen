@@ -24,7 +24,7 @@ struct MotorCommand {
     double torque_limit_Nm;     // [0.0, 655.35], res 0.01
 };
 
-// drive_status (0x00000200, plc_to_pc)
+// drive_status (0x00000200, plc_to_pc, timeout 200ms)
 struct DriveStatus {
     double actual_velocity_rpm; // [-3200.0, 3200.0], res 0.1
     double motor_temp_degC;     // [-40.0, 200.0], res 0.1
@@ -84,7 +84,7 @@ inline std::optional<MotorCommand> parse_motor_command(const can_frame &frame) {
     return msg;
 }
 
-// drive_status (0x00000200, plc_to_pc)
+// drive_status (0x00000200, plc_to_pc, timeout 200ms)
 inline std::optional<DriveStatus> parse_drive_status(const can_frame &frame) {
     if ((frame.can_id & CAN_EFF_MASK) != 0x00000200)
         return std::nullopt;
@@ -124,7 +124,7 @@ inline can_frame build_motor_command(const MotorCommand &msg) {
     return frame;
 }
 
-// drive_status (0x00000200, plc_to_pc)
+// drive_status (0x00000200, plc_to_pc, timeout 200ms)
 inline can_frame build_drive_status(const DriveStatus &msg) {
     can_frame frame{};
     frame.can_id = 0x00000200 | CAN_EFF_FLAG;
